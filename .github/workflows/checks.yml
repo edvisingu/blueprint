@@ -1,0 +1,61 @@
+name: Site checks
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  html-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx --yes html-validate index.html
+
+  check-links:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-links.mjs
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Serve site and run Lighthouse
+        run: |
+          npx --yes http-server -p 8080 -c-1 . &
+          sleep 2
+          curl -sSf http://localhost:8080/index.html > /dev/null
+          npx --yes lighthouse http://localhost:8080/index.html \
+            --output=json --output-path=./lighthouse-report.json \
+            --chrome-flags="--headless=new --no-sandbox" \
+            --only-categories=performance,accessibility,best-practices,seo \
+            --quiet
+      - name: Enforce score thresholds
+        run: |
+          node -e '
+            const r = require("./lighthouse-report.json");
+            const min = { accessibility: 0.9, seo: 0.9, "best-practices": 0.9, performance: 0.5 };
+            let failed = false;
+            for (const [key, threshold] of Object.entries(min)) {
+              const score = r.categories[key].score;
+              console.log(`${key}: ${Math.round(score * 100)} (min ${Math.round(threshold * 100)})`);
+              if (score < threshold) failed = true;
+            }
+            if (failed) process.exit(1);
+          '
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: lighthouse-report
+          path: lighthouse-report.json
