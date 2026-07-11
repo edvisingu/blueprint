@@ -1,0 +1,213 @@
+# EdVisingU AI Ecosystem — foundation fleet (Masterbuild §20.7 + §22.2 + §24.6 + §24.7 + §25.1 + §6.3).
+# Single master env file (§21.9); per-agent .env split is a Level-3 upgrade (docs/ERRATA.md #5).
+# All host ports bind 127.0.0.1 — nginx (§21.6) is the only public surface (§14.1).
+# DATA_ROOT defaults to /srv on the VPS (§21.8); override for local/CI runs.
+
+x-agent-common: &agent-common
+  restart: always
+  env_file: .env
+  depends_on:
+    - fastapi-router
+    - redis
+
+services:
+  fastapi-router:
+    build: ./router
+    container_name: fastapi-router
+    restart: always
+    ports:
+      - "127.0.0.1:8000:8000"
+    env_file: .env
+
+  hermes-core:
+    <<: *agent-common
+    build: ./agents/hermes-core
+    container_name: hermes-core
+    ports:
+      - "127.0.0.1:8001:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-core/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  hermes-content:
+    <<: *agent-common
+    build: ./agents/hermes-content
+    container_name: hermes-content
+    ports:
+      - "127.0.0.1:8002:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-content/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  hermes-advisor:
+    <<: *agent-common
+    build: ./agents/hermes-advisor
+    container_name: hermes-advisor
+    ports:
+      - "127.0.0.1:8003:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-advisor/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  hermes-credihire:
+    <<: *agent-common
+    build: ./agents/hermes-credihire
+    container_name: hermes-credihire
+    ports:
+      - "127.0.0.1:8004:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-credihire/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  hermes-ops:
+    <<: *agent-common
+    build: ./agents/hermes-ops
+    container_name: hermes-ops
+    ports:
+      - "127.0.0.1:8005:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-ops/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  hermes-social:
+    <<: *agent-common
+    build: ./agents/hermes-social
+    container_name: hermes-social
+    ports:
+      - "127.0.0.1:8006:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-social/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  # Port 8007 intentionally unused — the manual skips it (docs/ERRATA.md #6).
+
+  hermes-builder:
+    <<: *agent-common
+    build: ./agents/hermes-builder
+    container_name: hermes-builder
+    ports:
+      - "127.0.0.1:8008:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-builder/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  hermes-research:
+    <<: *agent-common
+    build: ./agents/hermes-research
+    container_name: hermes-research
+    ports:
+      - "127.0.0.1:8009:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-research/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  hermes-finance:
+    <<: *agent-common
+    build: ./agents/hermes-finance
+    container_name: hermes-finance
+    ports:
+      - "127.0.0.1:8010:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-finance/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  hermes-email:
+    <<: *agent-common
+    build: ./agents/hermes-email
+    container_name: hermes-email
+    ports:
+      - "127.0.0.1:8011:8000"
+    volumes:
+      - ${DATA_ROOT:-/srv}/hermes-email/data:/data
+      - ${DATA_ROOT:-/srv}/agent-bus:/agent-bus
+      - ${DATA_ROOT:-/srv}/shared-files:/srv/shared-files
+      - ./tools:/app/tools:ro
+
+  # Browser interface (§22.2) — agents.edvisingu.com via nginx
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui
+    restart: always
+    ports:
+      - "127.0.0.1:3000:8080"
+    environment:
+      - OPENAI_API_BASE_URL=http://fastapi-router:8000/v1
+      - OPENAI_API_KEY=local-key
+      - WEBUI_SECRET_KEY=${WEBUI_SECRET_KEY}
+      - ENABLE_SIGNUP=false
+    volumes:
+      - open-webui-data:/app/backend/data
+    depends_on:
+      - fastapi-router
+
+  # Automation backbone (§6.3) — keep private: SSH tunnel or Tailscale only (§14.1)
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    restart: always
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=${N8N_BASIC_AUTH_USER}
+      - N8N_BASIC_AUTH_PASSWORD=${N8N_BASIC_AUTH_PASSWORD}
+      - GENERIC_TIMEZONE=America/Toronto
+      - TZ=America/Toronto
+    volumes:
+      - n8n-data:/home/node/.n8n
+
+  # Vector memory (§25.5) — host 8800 to avoid clashing with the router on 8000
+  chromadb:
+    image: chromadb/chroma:latest
+    container_name: chromadb
+    restart: always
+    ports:
+      - "127.0.0.1:8800:8000"
+    volumes:
+      - chroma-data:/data
+
+  # Task bus + caching (§24.7)
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+
+  # Monitoring (§25.1) — status.edvisingu.com via nginx
+  uptime-kuma:
+    image: louislam/uptime-kuma:1
+    container_name: uptime-kuma
+    restart: always
+    ports:
+      - "127.0.0.1:3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+
+volumes:
+  open-webui-data:
+  n8n-data:
+  chroma-data:
+  redis-data:
+  uptime-kuma-data:

@@ -1,0 +1,29 @@
+# Secrets — never commit (Masterbuild §14.1)
+.env
+.env.*
+!.env.example
+*.pem
+credentials.json
+token.json
+
+# Agent runtime state (lives in /srv on the VPS, §20.4)
+state.db
+memories/
+sessions/
+logs/
+*.log
+
+# Local data / CI scratch
+.ci-data/
+chroma-data/
+data/
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+venv/
+.venv/
+
+# Node
+node_modules/

@@ -1,0 +1,19 @@
+# OpenJarvis systemd unit (Masterbuild §21.4b) — REFERENCE ONLY.
+# OpenJarvis is an OPTIONAL host-level service, not part of bootstrap.
+#
+# SECURITY: the manual's installer URL (openjarvis.ai) is an unverified
+# domain. Install ONLY from the official project source:
+#   https://open-jarvis.github.io/OpenJarvis/install.sh
+# See docs/OPTIONAL-HOST-SERVICES.md before enabling this.
+[Unit]
+Description=OpenJarvis AI OS
+After=network.target
+
+[Service]
+User=deploy
+WorkingDirectory=/home/deploy/OpenJarvis
+ExecStart=/home/deploy/OpenJarvis/scripts/quickstart.sh
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

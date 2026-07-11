@@ -1,0 +1,35 @@
+# CI for when ai-ecosystem lives in its own repository (paths relative to repo root).
+# While the folder is inside the blueprint repo, the active workflow is
+# blueprint/.github/workflows/ai-ecosystem-ci.yml instead.
+name: ai-ecosystem CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install test deps
+        run: pip install fastapi httpx pytest uvicorn pydantic redis
+      - name: Lint (compileall + bash -n + compose config)
+        run: |
+          make lint
+          cp .env.example .env
+          docker compose config -q
+          rm .env
+      - name: Unit tests (router + agents)
+        run: make test
+
+  smoke:
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Keyless E2E smoke (FAKE_LLM=1)
+        run: make smoke
