@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Explee — AI Prospecting</title>
+  <meta name="description" content="Turn a plain-English description of your ideal customer into a verified lead list — powered by semantic search." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="logo" id="brandHome" style="cursor:pointer">
+      <span class="mark">E</span> Explee <span class="beta">CLONE</span>
+    </div>
+    <nav class="topnav">
+      <button data-nav="search" class="active">Search</button>
+      <button data-nav="lists">My Lists <span class="count-pill" id="listBadge" style="display:none">0</span></button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="credits">Credits <b>250</b> / mo</div>
+    <div class="avatar">AN</div>
+  </header>
+
+  <!-- SEARCH VIEW -->
+  <section class="view active" data-view="search">
+    <div class="wrap">
+      <div class="hero" id="hero">
+        <h1>Describe your ideal customer.<br /><span class="grad">Get a verified lead list.</span></h1>
+        <p>Semantic search across 75M+ companies and 536M professional profiles — no filters, no boolean strings. Just describe who you want.</p>
+
+        <div class="searchbar">
+          <span class="si">🔎</span>
+          <input id="searchInput" type="text" autocomplete="off"
+                 placeholder="e.g. Fintech startups in the UK under 30 employees" />
+          <button class="btn" id="searchBtn">Search ✦</button>
+        </div>
+
+        <div class="examples">
+          <button class="chip" data-q="Fintech startups in the UK under 30 employees">Fintech startups in the UK under 30 employees</button>
+          <button class="chip" data-q="AI companies in the US with verified emails">AI companies in the US</button>
+          <button class="chip" data-q="HealthTech companies over 50 employees">HealthTech over 50 employees</button>
+          <button class="chip" data-q="E-commerce companies in Europe">E-commerce in Europe</button>
+          <button class="chip" data-q="Cybersecurity startups">Cybersecurity startups</button>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat"><b>75M+</b><span>Companies</span></div>
+          <div class="stat"><b>536M</b><span>Profiles</span></div>
+          <div class="stat"><b>97%</b><span>Email deliverability</span></div>
+          <div class="stat"><b>Semantic</b><span>AI search</span></div>
+        </div>
+      </div>
+
+      <div id="results"></div>
+    </div>
+  </section>
+
+  <!-- LISTS VIEW -->
+  <section class="view" data-view="lists">
+    <div class="wrap">
+      <div id="listView"></div>
+    </div>
+  </section>
+
+  <!-- Company detail modal -->
+  <div class="modal-bg" id="modalBg">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <div class="toast-wrap" id="toasts"></div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
