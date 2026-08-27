@@ -1,0 +1,1242 @@
+<title>Explee — AI Prospecting</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+:root {
+  --bg: #0b0d12;
+  --bg-2: #11141c;
+  --panel: #151925;
+  --panel-2: #1b2030;
+  --border: #262c3d;
+  --text: #e7eaf2;
+  --muted: #9aa3b8;
+  --faint: #6b7488;
+  --brand: #6c5ce7;
+  --brand-2: #8f7bff;
+  --brand-soft: rgba(108, 92, 231, 0.14);
+  --green: #2ecc71;
+  --amber: #f5a623;
+  --red: #ff5b6a;
+  --radius: 14px;
+  --shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font);
+  background: radial-gradient(1200px 600px at 80% -10%, rgba(108, 92, 231, 0.12), transparent 60%),
+              radial-gradient(900px 500px at -10% 10%, rgba(143, 123, 255, 0.08), transparent 55%),
+              var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+button { font-family: inherit; cursor: pointer; }
+::selection { background: var(--brand-soft); }
+
+/* ---------- Top bar ---------- */
+.topbar {
+  height: 62px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(11, 13, 18, 0.7);
+  backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+.logo .mark {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  display: grid; place-items: center;
+  font-size: 15px; color: white;
+  box-shadow: 0 6px 18px rgba(108, 92, 231, 0.5);
+}
+.logo .beta {
+  font-size: 10px; font-weight: 700; color: var(--brand-2);
+  border: 1px solid var(--border); border-radius: 20px;
+  padding: 2px 8px; margin-left: 2px; letter-spacing: 0.05em;
+}
+.topnav { display: flex; gap: 4px; margin-left: 14px; }
+.topnav button {
+  background: none; border: none; color: var(--muted);
+  padding: 8px 14px; border-radius: 9px; font-size: 14px; font-weight: 500;
+}
+.topnav button:hover { color: var(--text); background: var(--panel); }
+.topnav button.active { color: var(--text); background: var(--panel-2); }
+.spacer { flex: 1; }
+.credits {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px;
+}
+.credits b { color: var(--text); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: linear-gradient(135deg, #4a4f6a, #2b2f45);
+  display: grid; place-items: center; font-size: 13px; font-weight: 700;
+}
+
+/* ---------- Layout ---------- */
+.view { display: none; }
+.view.active { display: block; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 24px 80px; }
+
+/* ---------- Search hero ---------- */
+.hero { text-align: center; padding: 46px 0 26px; }
+.hero h1 {
+  font-size: 34px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.15;
+}
+.hero h1 .grad {
+  background: linear-gradient(120deg, var(--brand-2), #c9a6ff);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero p { color: var(--muted); margin-top: 12px; font-size: 15px; }
+
+.searchbar {
+  margin: 26px auto 0; max-width: 760px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 16px; padding: 8px 8px 8px 18px;
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: var(--shadow);
+}
+.searchbar:focus-within { border-color: var(--brand); }
+.searchbar .si { color: var(--faint); font-size: 18px; }
+.searchbar input {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--text); font-size: 15.5px; padding: 12px 0;
+}
+.searchbar input::placeholder { color: var(--faint); }
+.btn {
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: white; border: none; border-radius: 11px;
+  padding: 12px 20px; font-weight: 600; font-size: 14px;
+  display: inline-flex; align-items: center; gap: 8px;
+  transition: transform 0.08s ease, box-shadow 0.2s ease;
+}
+.btn:hover { box-shadow: 0 8px 22px rgba(108, 92, 231, 0.45); }
+.btn:active { transform: translateY(1px); }
+.btn.ghost {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--border); box-shadow: none;
+}
+.btn.ghost:hover { border-color: var(--brand); }
+.btn.small { padding: 8px 14px; font-size: 13px; border-radius: 9px; }
+.btn[disabled] { opacity: 0.5; pointer-events: none; }
+
+.examples { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 18px; }
+.chip {
+  font-size: 13px; color: var(--muted);
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 20px; padding: 7px 14px; transition: 0.15s;
+}
+.chip:hover { color: var(--text); border-color: var(--brand); }
+
+.stats-row { display: flex; gap: 26px; justify-content: center; margin-top: 34px; flex-wrap: wrap; }
+.stat { text-align: center; }
+.stat b { display: block; font-size: 22px; font-weight: 800; }
+.stat span { font-size: 12px; color: var(--faint); letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* ---------- Results ---------- */
+.results-layout { display: grid; grid-template-columns: 244px 1fr; gap: 22px; align-items: start; margin-top: 8px; }
+.filters {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; position: sticky; top: 84px;
+}
+.filters h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); margin-bottom: 12px; }
+.fgroup { margin-bottom: 20px; }
+.fgroup > label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 7px; font-weight: 600; }
+.fopt { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13.5px; color: var(--muted); cursor: pointer; }
+.fopt:hover { color: var(--text); }
+.fopt input { accent-color: var(--brand); width: 15px; height: 15px; }
+.fselect, .finput {
+  width: 100%; background: var(--bg-2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 9px; padding: 9px 10px; font-size: 13.5px; outline: none;
+}
+.fselect:focus, .finput:focus { border-color: var(--brand); }
+.filters .clear { background: none; border: none; color: var(--brand-2); font-size: 12.5px; padding: 0; }
+
+.inline-search {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 12px; padding: 6px 6px 6px 14px; margin-bottom: 18px;
+}
+.inline-search:focus-within { border-color: var(--brand); }
+.inline-search .si { color: var(--faint); font-size: 15px; }
+.inline-search input { flex: 1; background: none; border: none; outline: none; color: var(--text); font-size: 14.5px; padding: 9px 0; }
+.inline-search input::placeholder { color: var(--faint); }
+
+.results-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px; flex-wrap: wrap; gap: 12px;
+}
+.results-head .rq { font-size: 14px; color: var(--muted); }
+.results-head .rq b { color: var(--text); }
+.results-head .actions { display: flex; gap: 8px; }
+
+.parsed { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 16px; }
+.token {
+  font-size: 12px; padding: 5px 10px; border-radius: 20px;
+  background: var(--brand-soft); color: var(--brand-2); border: 1px solid rgba(108, 92, 231, 0.35);
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.token .k { color: var(--faint); text-transform: uppercase; font-size: 10px; letter-spacing: 0.05em; }
+
+.card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 18px; margin-bottom: 12px;
+  transition: border-color 0.15s, transform 0.1s;
+  display: grid; grid-template-columns: 46px 1fr auto; gap: 16px; align-items: start;
+}
+.card:hover { border-color: var(--brand); }
+.card .fav {
+  width: 46px; height: 46px; border-radius: 11px;
+  display: grid; place-items: center; font-weight: 800; font-size: 18px; color: white;
+}
+.card .cname { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.card .cname h4 { font-size: 16px; font-weight: 700; }
+.card .cname .dom { font-size: 12.5px; color: var(--faint); }
+.card .cdesc { color: var(--muted); font-size: 13.5px; margin-top: 6px; line-height: 1.5; }
+.card .meta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 11px; font-size: 12.5px; color: var(--faint); }
+.card .meta span { display: inline-flex; align-items: center; gap: 5px; }
+.card .right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.match {
+  font-size: 12px; font-weight: 700; color: var(--green);
+  border: 1px solid rgba(46, 204, 113, 0.3); background: rgba(46, 204, 113, 0.08);
+  border-radius: 20px; padding: 4px 10px;
+}
+.match.mid { color: var(--amber); border-color: rgba(245, 166, 35, 0.3); background: rgba(245, 166, 35, 0.08); }
+.card .contacts-badge { font-size: 12px; color: var(--muted); }
+.tagrow { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+.tag { font-size: 11px; color: var(--faint); background: var(--panel-2); border-radius: 6px; padding: 3px 8px; }
+
+.empty { text-align: center; padding: 60px 20px; color: var(--muted); }
+.empty .em { font-size: 40px; margin-bottom: 10px; }
+
+/* ---------- Modal (company detail) ---------- */
+.modal-bg {
+  position: fixed; inset: 0; background: rgba(6, 8, 12, 0.7); backdrop-filter: blur(4px);
+  display: none; align-items: flex-start; justify-content: center; z-index: 60; padding: 40px 20px; overflow-y: auto;
+}
+.modal-bg.open { display: flex; }
+.modal {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: 18px; width: 100%; max-width: 720px; box-shadow: var(--shadow);
+}
+.modal-head { display: flex; gap: 16px; align-items: flex-start; padding: 22px 24px; border-bottom: 1px solid var(--border); }
+.modal-head .fav { width: 52px; height: 52px; border-radius: 12px; display: grid; place-items: center; font-weight: 800; font-size: 20px; color: white; }
+.modal-head h2 { font-size: 20px; font-weight: 800; }
+.modal-head .sub { color: var(--muted); font-size: 13.5px; margin-top: 3px; }
+.modal-head .x { margin-left: auto; background: none; border: none; color: var(--faint); font-size: 24px; line-height: 1; }
+.modal-head .x:hover { color: var(--text); }
+.modal-body { padding: 22px 24px; }
+.modal-body .sec-title { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--faint); margin: 4px 0 12px; }
+.kv { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px 22px; margin-bottom: 22px; }
+.kv div .k { font-size: 11.5px; color: var(--faint); }
+.kv div .v { font-size: 14px; color: var(--text); margin-top: 2px; }
+
+.contact {
+  display: flex; align-items: center; gap: 12px; padding: 12px 0; border-top: 1px solid var(--border);
+}
+.contact .ci { width: 38px; height: 38px; border-radius: 50%; background: var(--panel-2); display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+.contact .cn { font-size: 14px; font-weight: 600; }
+.contact .ct { font-size: 12.5px; color: var(--muted); }
+.contact .em { font-size: 12.5px; color: var(--brand-2); }
+.vbadge { font-size: 11px; padding: 3px 8px; border-radius: 20px; display: inline-flex; align-items: center; gap: 4px; }
+.vbadge.ok { color: var(--green); background: rgba(46, 204, 113, 0.1); }
+.vbadge.no { color: var(--amber); background: rgba(245, 166, 35, 0.1); }
+.contact .cright { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+.modal-foot { display: flex; gap: 10px; padding: 18px 24px; border-top: 1px solid var(--border); flex-wrap: wrap; }
+
+/* AI message box */
+.aibox { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin-top: 6px; }
+.aibox textarea {
+  width: 100%; min-height: 120px; background: var(--bg-2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 9px; padding: 12px; font-family: var(--font); font-size: 13.5px; resize: vertical; line-height: 1.55;
+}
+.aibox .row { display: flex; gap: 8px; margin-top: 10px; align-items: center; }
+.aibox .hint { font-size: 12px; color: var(--faint); }
+
+/* ---------- Lists view ---------- */
+.list-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px; }
+.list-head h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.02em; }
+.table { width: 100%; border-collapse: collapse; background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.table th { text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--faint); padding: 13px 16px; border-bottom: 1px solid var(--border); font-weight: 600; }
+.table td { padding: 13px 16px; border-bottom: 1px solid var(--border); font-size: 13.5px; color: var(--muted); vertical-align: middle; }
+.table tr:last-child td { border-bottom: none; }
+.table tr:hover td { background: var(--panel-2); }
+.table .co { color: var(--text); font-weight: 600; }
+.table .em { color: var(--brand-2); }
+.remove { background: none; border: none; color: var(--faint); font-size: 16px; }
+.remove:hover { color: var(--red); }
+
+.saved-flag { color: var(--green); }
+
+/* ---------- Toast ---------- */
+.toast-wrap { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); z-index: 90; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.toast {
+  background: var(--panel-2); border: 1px solid var(--border); color: var(--text);
+  padding: 11px 18px; border-radius: 10px; font-size: 13.5px; box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 8px; animation: pop 0.2s ease;
+}
+.toast .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); }
+@keyframes pop { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* loading */
+.loading { text-align: center; padding: 70px 0; color: var(--muted); }
+.spinner {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid var(--border); border-top-color: var(--brand);
+  margin: 0 auto 16px; animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.count-pill { font-size: 12px; background: var(--brand-soft); color: var(--brand-2); border-radius: 20px; padding: 3px 10px; font-weight: 600; }
+
+@media (max-width: 860px) {
+  .results-layout { grid-template-columns: 1fr; }
+  .filters { position: static; }
+  .card { grid-template-columns: 40px 1fr; }
+  .card .right { grid-column: 1 / -1; flex-direction: row; align-items: center; }
+  .kv { grid-template-columns: 1fr; }
+}
+
+</style>
+<!-- Top bar -->
+  <header class="topbar">
+    <div class="logo" id="brandHome" style="cursor:pointer">
+      <span class="mark">E</span> Explee <span class="beta">CLONE</span>
+    </div>
+    <nav class="topnav">
+      <button data-nav="search" class="active">Search</button>
+      <button data-nav="lists">My Lists <span class="count-pill" id="listBadge" style="display:none">0</span></button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="credits">Credits <b>250</b> / mo</div>
+    <div class="avatar">AN</div>
+  </header>
+
+  <!-- SEARCH VIEW -->
+  <section class="view active" data-view="search">
+    <div class="wrap">
+      <div class="hero" id="hero">
+        <h1>Describe your ideal customer.<br /><span class="grad">Get a verified lead list.</span></h1>
+        <p>Semantic search across 75M+ companies and 536M professional profiles — no filters, no boolean strings. Just describe who you want.</p>
+
+        <div class="searchbar">
+          <span class="si">🔎</span>
+          <input id="searchInput" type="text" autocomplete="off"
+                 placeholder="e.g. Fintech startups in the UK under 30 employees" />
+          <button class="btn" id="searchBtn">Search ✦</button>
+        </div>
+
+        <div class="examples">
+          <button class="chip" data-q="Fintech startups in the UK under 30 employees">Fintech startups in the UK under 30 employees</button>
+          <button class="chip" data-q="AI companies in the US with verified emails">AI companies in the US</button>
+          <button class="chip" data-q="HealthTech companies over 50 employees">HealthTech over 50 employees</button>
+          <button class="chip" data-q="E-commerce companies in Europe">E-commerce in Europe</button>
+          <button class="chip" data-q="Cybersecurity startups">Cybersecurity startups</button>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat"><b>75M+</b><span>Companies</span></div>
+          <div class="stat"><b>536M</b><span>Profiles</span></div>
+          <div class="stat"><b>97%</b><span>Email deliverability</span></div>
+          <div class="stat"><b>Semantic</b><span>AI search</span></div>
+        </div>
+      </div>
+
+      <div id="results"></div>
+    </div>
+  </section>
+
+  <!-- LISTS VIEW -->
+  <section class="view" data-view="lists">
+    <div class="wrap">
+      <div id="listView"></div>
+    </div>
+  </section>
+
+  <!-- Company detail modal -->
+  <div class="modal-bg" id="modalBg">
+    <div class="modal" id="modalContent"></div>
+  </div>
+
+  <div class="toast-wrap" id="toasts"></div>
+<script>
+/* Explee clone — built-in prospect database.
+ * Stands in for Explee's private 75M-company / 536M-profile index.
+ * Swap this array for a real API response and the rest of the app works unchanged.
+ */
+window.EXPLEE_DB = (function () {
+  const industries = {
+    fintech: "Fintech",
+    saas: "SaaS",
+    ecommerce: "E-commerce",
+    health: "HealthTech",
+    ai: "AI / ML",
+    marketing: "Marketing",
+    edtech: "EdTech",
+    logistics: "Logistics",
+    cyber: "Cybersecurity",
+    green: "CleanTech",
+  };
+
+  // helper to build a company quickly
+  let idc = 0;
+  const C = (o) => ({
+    id: "co_" + (++idc),
+    ...o,
+    domain: o.domain,
+    website: "https://" + o.domain,
+  });
+
+  const companies = [
+    C({ name: "NimbusPay", domain: "nimbuspay.io", industry: "Fintech", sub: "Payments infrastructure",
+      country: "United Kingdom", city: "London", size: 24, revenue: "$3M–$5M", founded: 2021,
+      tags: ["payments", "api", "b2b", "cards", "fintech"],
+      desc: "Embedded payments API that lets startups issue cards and move money in minutes.",
+      contacts: [
+        { name: "Priya Shah", title: "CEO & Co-founder", seniority: "C-Suite", email: "priya@nimbuspay.io", verified: true, linkedin: "in/priyashah" },
+        { name: "Tom Errington", title: "Head of Growth", seniority: "Head", email: "tom@nimbuspay.io", verified: true, linkedin: "in/tomerrington" },
+      ] }),
+    C({ name: "Ledgerly", domain: "ledgerly.co", industry: "Fintech", sub: "Accounting automation",
+      country: "United Kingdom", city: "Manchester", size: 18, revenue: "$1M–$3M", founded: 2022,
+      tags: ["accounting", "automation", "fintech", "smb", "api"],
+      desc: "AI bookkeeping that reconciles invoices and files taxes for small businesses.",
+      contacts: [
+        { name: "Sarah Nolan", title: "Founder", seniority: "C-Suite", email: "sarah@ledgerly.co", verified: true, linkedin: "in/sarahnolan" },
+      ] }),
+    C({ name: "Vaultline", domain: "vaultline.eu", industry: "Fintech", sub: "Treasury management",
+      country: "Germany", city: "Berlin", size: 42, revenue: "$5M–$10M", founded: 2020,
+      tags: ["treasury", "banking", "fintech", "b2b", "cash"],
+      desc: "Cash-flow and treasury platform for scaling European companies.",
+      contacts: [
+        { name: "Lena Vogt", title: "CFO", seniority: "C-Suite", email: "lena.vogt@vaultline.eu", verified: true, linkedin: "in/lenavogt" },
+        { name: "Marco Bauer", title: "VP Sales", seniority: "VP", email: "marco@vaultline.eu", verified: false, linkedin: "in/marcobauer" },
+      ] }),
+    C({ name: "PennyRoot", domain: "pennyroot.com", industry: "Fintech", sub: "Consumer lending",
+      country: "United States", city: "Austin", size: 67, revenue: "$10M–$25M", founded: 2019,
+      tags: ["lending", "credit", "fintech", "consumer", "ml"],
+      desc: "Fair-credit lending marketplace powered by alternative-data underwriting.",
+      contacts: [
+        { name: "Devon Price", title: "Chief Executive Officer", seniority: "C-Suite", email: "devon@pennyroot.com", verified: true, linkedin: "in/devonprice" },
+      ] }),
+    C({ name: "Cloudscribe", domain: "cloudscribe.io", industry: "SaaS", sub: "Developer tools",
+      country: "United States", city: "San Francisco", size: 55, revenue: "$5M–$10M", founded: 2020,
+      tags: ["devtools", "saas", "api", "docs", "developers"],
+      desc: "Auto-generated, always-up-to-date API documentation for engineering teams.",
+      contacts: [
+        { name: "Maya Chen", title: "Co-founder & CTO", seniority: "C-Suite", email: "maya@cloudscribe.io", verified: true, linkedin: "in/mayachen" },
+        { name: "Raj Patel", title: "Director of Marketing", seniority: "Director", email: "raj@cloudscribe.io", verified: true, linkedin: "in/rajpatel" },
+      ] }),
+    C({ name: "Taskloop", domain: "taskloop.app", industry: "SaaS", sub: "Project management",
+      country: "Canada", city: "Toronto", size: 31, revenue: "$3M–$5M", founded: 2021,
+      tags: ["productivity", "saas", "project", "teams", "b2b"],
+      desc: "Lightweight project management that turns meeting notes into tracked tasks.",
+      contacts: [
+        { name: "Aisha Rahman", title: "CEO", seniority: "C-Suite", email: "aisha@taskloop.app", verified: true, linkedin: "in/aisharahman" },
+      ] }),
+    C({ name: "Formcastle", domain: "formcastle.com", industry: "SaaS", sub: "No-code forms",
+      country: "United States", city: "Denver", size: 12, revenue: "$1M–$3M", founded: 2022,
+      tags: ["nocode", "forms", "saas", "smb", "automation"],
+      desc: "Drag-and-drop forms and workflows for teams that can't code.",
+      contacts: [
+        { name: "Grace Miller", title: "Founder & CEO", seniority: "C-Suite", email: "grace@formcastle.com", verified: true, linkedin: "in/gracemiller" },
+      ] }),
+    C({ name: "Shipfox", domain: "shipfox.io", industry: "Logistics", sub: "Last-mile delivery",
+      country: "United States", city: "Chicago", size: 140, revenue: "$25M–$50M", founded: 2017,
+      tags: ["logistics", "delivery", "supply-chain", "b2b", "ops"],
+      desc: "Routing and tracking platform for regional last-mile delivery fleets.",
+      contacts: [
+        { name: "Carlos Mendes", title: "VP of Operations", seniority: "VP", email: "carlos@shipfox.io", verified: true, linkedin: "in/carlosmendes" },
+        { name: "Emily Ford", title: "Head of Partnerships", seniority: "Head", email: "emily@shipfox.io", verified: true, linkedin: "in/emilyford" },
+      ] }),
+    C({ name: "Cratewise", domain: "cratewise.com", industry: "Logistics", sub: "Warehouse software",
+      country: "Netherlands", city: "Rotterdam", size: 76, revenue: "$10M–$25M", founded: 2018,
+      tags: ["warehouse", "logistics", "inventory", "b2b", "saas"],
+      desc: "Warehouse management system for mid-market fulfillment operators.",
+      contacts: [
+        { name: "Jeroen Visser", title: "Chief Operating Officer", seniority: "C-Suite", email: "jeroen@cratewise.com", verified: true, linkedin: "in/jeroenvisser" },
+      ] }),
+    C({ name: "MediMind", domain: "medimind.health", industry: "HealthTech", sub: "Clinical AI",
+      country: "United States", city: "Boston", size: 88, revenue: "$10M–$25M", founded: 2019,
+      tags: ["health", "ai", "clinical", "b2b", "ml"],
+      desc: "Ambient AI scribe that drafts clinical notes from patient visits.",
+      contacts: [
+        { name: "Dr. Nina Okafor", title: "Chief Medical Officer", seniority: "C-Suite", email: "nina@medimind.health", verified: true, linkedin: "in/ninaokafor" },
+        { name: "Ben Stein", title: "VP Sales", seniority: "VP", email: "ben@medimind.health", verified: true, linkedin: "in/benstein" },
+      ] }),
+    C({ name: "Pulsecare", domain: "pulsecare.io", industry: "HealthTech", sub: "Remote monitoring",
+      country: "United Kingdom", city: "Bristol", size: 29, revenue: "$3M–$5M", founded: 2021,
+      tags: ["health", "monitoring", "devices", "b2b", "iot"],
+      desc: "Remote patient-monitoring platform for chronic-care clinics.",
+      contacts: [
+        { name: "Olivia Grant", title: "CEO", seniority: "C-Suite", email: "olivia@pulsecare.io", verified: true, linkedin: "in/oliviagrant" },
+      ] }),
+    C({ name: "Neurabit", domain: "neurabit.ai", industry: "AI / ML", sub: "LLM infrastructure",
+      country: "United States", city: "San Francisco", size: 47, revenue: "$5M–$10M", founded: 2022,
+      tags: ["ai", "llm", "infra", "developers", "ml"],
+      desc: "Fine-tuning and evaluation platform for teams shipping LLM features.",
+      contacts: [
+        { name: "Ivan Petrov", title: "Co-founder & CEO", seniority: "C-Suite", email: "ivan@neurabit.ai", verified: true, linkedin: "in/ivanpetrov" },
+        { name: "Hannah Cole", title: "Head of Growth", seniority: "Head", email: "hannah@neurabit.ai", verified: true, linkedin: "in/hannahcole" },
+      ] }),
+    C({ name: "Visionary Labs", domain: "visionarylabs.ai", industry: "AI / ML", sub: "Computer vision",
+      country: "France", city: "Paris", size: 34, revenue: "$3M–$5M", founded: 2020,
+      tags: ["ai", "vision", "manufacturing", "b2b", "ml"],
+      desc: "Computer-vision quality inspection for manufacturing lines.",
+      contacts: [
+        { name: "Camille Laurent", title: "CTO", seniority: "C-Suite", email: "camille@visionarylabs.ai", verified: false, linkedin: "in/camillelaurent" },
+      ] }),
+    C({ name: "Cartwheel", domain: "cartwheel.shop", industry: "E-commerce", sub: "DTC brand tools",
+      country: "United States", city: "Los Angeles", size: 61, revenue: "$10M–$25M", founded: 2018,
+      tags: ["ecommerce", "dtc", "retail", "saas", "marketing"],
+      desc: "Post-purchase upsell and subscription tooling for DTC brands.",
+      contacts: [
+        { name: "Jordan Blake", title: "CEO", seniority: "C-Suite", email: "jordan@cartwheel.shop", verified: true, linkedin: "in/jordanblake" },
+        { name: "Nia Roberts", title: "Director of Growth", seniority: "Director", email: "nia@cartwheel.shop", verified: true, linkedin: "in/niaroberts" },
+      ] }),
+    C({ name: "Bundl", domain: "bundl.store", industry: "E-commerce", sub: "Checkout",
+      country: "Canada", city: "Vancouver", size: 22, revenue: "$1M–$3M", founded: 2021,
+      tags: ["ecommerce", "checkout", "payments", "dtc", "saas"],
+      desc: "One-click checkout that boosts conversion for Shopify merchants.",
+      contacts: [
+        { name: "Liam Fraser", title: "Founder", seniority: "C-Suite", email: "liam@bundl.store", verified: true, linkedin: "in/liamfraser" },
+      ] }),
+    C({ name: "Growthhive", domain: "growthhive.com", industry: "Marketing", sub: "Marketing automation",
+      country: "United States", city: "New York", size: 95, revenue: "$10M–$25M", founded: 2017,
+      tags: ["marketing", "automation", "email", "b2b", "saas"],
+      desc: "Multichannel marketing automation for mid-market B2B teams.",
+      contacts: [
+        { name: "Rachel Kim", title: "VP Marketing", seniority: "VP", email: "rachel@growthhive.com", verified: true, linkedin: "in/rachelkim" },
+        { name: "Sam Turner", title: "Head of Demand Gen", seniority: "Head", email: "sam@growthhive.com", verified: true, linkedin: "in/samturner" },
+      ] }),
+    C({ name: "Clickforge", domain: "clickforge.io", industry: "Marketing", sub: "Ad optimization",
+      country: "Australia", city: "Sydney", size: 27, revenue: "$3M–$5M", founded: 2021,
+      tags: ["marketing", "ads", "ppc", "ai", "saas"],
+      desc: "AI ad-spend optimizer for performance marketing agencies.",
+      contacts: [
+        { name: "Mia Nguyen", title: "CEO & Founder", seniority: "C-Suite", email: "mia@clickforge.io", verified: true, linkedin: "in/mianguyen" },
+      ] }),
+    C({ name: "Lernova", domain: "lernova.edu", industry: "EdTech", sub: "Corporate training",
+      country: "United Kingdom", city: "Edinburgh", size: 44, revenue: "$5M–$10M", founded: 2019,
+      tags: ["edtech", "training", "lms", "b2b", "saas"],
+      desc: "Skills platform that maps employee learning to business outcomes.",
+      contacts: [
+        { name: "David Osei", title: "Chief Executive Officer", seniority: "C-Suite", email: "david@lernova.edu", verified: true, linkedin: "in/davidosei" },
+      ] }),
+    C({ name: "Studybyte", domain: "studybyte.app", industry: "EdTech", sub: "K-12 learning",
+      country: "India", city: "Bengaluru", size: 120, revenue: "$10M–$25M", founded: 2018,
+      tags: ["edtech", "k12", "mobile", "consumer", "ai"],
+      desc: "Adaptive learning app for K-12 exam prep across India.",
+      contacts: [
+        { name: "Ananya Iyer", title: "Co-founder", seniority: "C-Suite", email: "ananya@studybyte.app", verified: false, linkedin: "in/ananyaiyer" },
+      ] }),
+    C({ name: "Sentrix", domain: "sentrix.security", industry: "Cybersecurity", sub: "Cloud security",
+      country: "United States", city: "Seattle", size: 73, revenue: "$10M–$25M", founded: 2019,
+      tags: ["cyber", "cloud", "security", "b2b", "saas"],
+      desc: "Cloud-native security posture management for engineering teams.",
+      contacts: [
+        { name: "Kevin Zhao", title: "CISO", seniority: "C-Suite", email: "kevin@sentrix.security", verified: true, linkedin: "in/kevinzhao" },
+        { name: "Laura Diaz", title: "VP Sales", seniority: "VP", email: "laura@sentrix.security", verified: true, linkedin: "in/lauradiaz" },
+      ] }),
+    C({ name: "Phishwall", domain: "phishwall.io", industry: "Cybersecurity", sub: "Email security",
+      country: "Ireland", city: "Dublin", size: 19, revenue: "$1M–$3M", founded: 2022,
+      tags: ["cyber", "email", "security", "smb", "ai"],
+      desc: "AI email-threat detection for small and mid-sized businesses.",
+      contacts: [
+        { name: "Sean Murphy", title: "Founder & CEO", seniority: "C-Suite", email: "sean@phishwall.io", verified: true, linkedin: "in/seanmurphy" },
+      ] }),
+    C({ name: "Voltaic", domain: "voltaic.energy", industry: "CleanTech", sub: "Solar software",
+      country: "United States", city: "Phoenix", size: 58, revenue: "$5M–$10M", founded: 2018,
+      tags: ["green", "solar", "energy", "b2b", "saas"],
+      desc: "Design and quoting software for residential solar installers.",
+      contacts: [
+        { name: "Alex Rivera", title: "CEO", seniority: "C-Suite", email: "alex@voltaic.energy", verified: true, linkedin: "in/alexrivera" },
+      ] }),
+    C({ name: "Terrametric", domain: "terrametric.eco", industry: "CleanTech", sub: "Carbon accounting",
+      country: "Sweden", city: "Stockholm", size: 36, revenue: "$3M–$5M", founded: 2020,
+      tags: ["green", "carbon", "esg", "b2b", "saas"],
+      desc: "Carbon-accounting platform that automates supply-chain emissions reporting.",
+      contacts: [
+        { name: "Freja Lindqvist", title: "Co-founder & CEO", seniority: "C-Suite", email: "freja@terrametric.eco", verified: true, linkedin: "in/frejalindqvist" },
+        { name: "Erik Holm", title: "Head of Sales", seniority: "Head", email: "erik@terrametric.eco", verified: false, linkedin: "in/erikholm" },
+      ] }),
+    C({ name: "Quantifi", domain: "quantifi.io", industry: "SaaS", sub: "Analytics",
+      country: "United Kingdom", city: "London", size: 15, revenue: "$1M–$3M", founded: 2022,
+      tags: ["analytics", "saas", "data", "b2b", "api"],
+      desc: "Product analytics for early-stage teams who hate configuring dashboards.",
+      contacts: [
+        { name: "Yusuf Ali", title: "Founder", seniority: "C-Suite", email: "yusuf@quantifi.io", verified: true, linkedin: "in/yusufali" },
+      ] }),
+    C({ name: "Hireflow", domain: "hireflow.work", industry: "SaaS", sub: "HR tech",
+      country: "United States", city: "Atlanta", size: 40, revenue: "$5M–$10M", founded: 2020,
+      tags: ["hr", "recruiting", "saas", "b2b", "ai"],
+      desc: "AI applicant screening and scheduling for high-volume recruiters.",
+      contacts: [
+        { name: "Tanya Brooks", title: "CEO", seniority: "C-Suite", email: "tanya@hireflow.work", verified: true, linkedin: "in/tanyabrooks" },
+      ] }),
+    C({ name: "Payglide", domain: "payglide.co", industry: "Fintech", sub: "Payroll",
+      country: "United States", city: "Miami", size: 52, revenue: "$5M–$10M", founded: 2019,
+      tags: ["payroll", "fintech", "hr", "b2b", "api"],
+      desc: "Global contractor payroll and compliance in 90+ countries.",
+      contacts: [
+        { name: "Sofia Moreno", title: "COO", seniority: "C-Suite", email: "sofia@payglide.co", verified: true, linkedin: "in/sofiamoreno" },
+      ] }),
+    C({ name: "Datawharf", domain: "datawharf.io", industry: "AI / ML", sub: "Data pipelines",
+      country: "Germany", city: "Munich", size: 63, revenue: "$10M–$25M", founded: 2018,
+      tags: ["ai", "data", "pipelines", "b2b", "infra"],
+      desc: "Managed data pipelines that feed analytics and ML workloads.",
+      contacts: [
+        { name: "Klaus Berger", title: "CTO", seniority: "C-Suite", email: "klaus@datawharf.io", verified: true, linkedin: "in/klausberger" },
+        { name: "Petra Wolf", title: "VP Marketing", seniority: "VP", email: "petra@datawharf.io", verified: true, linkedin: "in/petrawolf" },
+      ] }),
+    C({ name: "Foldr", domain: "foldr.app", industry: "SaaS", sub: "Document AI",
+      country: "Canada", city: "Montreal", size: 26, revenue: "$3M–$5M", founded: 2021,
+      tags: ["saas", "documents", "ai", "b2b", "automation"],
+      desc: "Extracts structured data from contracts and invoices automatically.",
+      contacts: [
+        { name: "Marc Tremblay", title: "Founder & CEO", seniority: "C-Suite", email: "marc@foldr.app", verified: true, linkedin: "in/marctremblay" },
+      ] }),
+    C({ name: "Roамio", domain: "roamio.travel", industry: "E-commerce", sub: "Travel tech",
+      country: "Spain", city: "Barcelona", size: 48, revenue: "$5M–$10M", founded: 2019,
+      tags: ["travel", "ecommerce", "consumer", "marketplace", "mobile"],
+      desc: "Curated boutique-hotel marketplace for independent travelers.",
+      contacts: [
+        { name: "Lucia Fernandez", title: "CEO", seniority: "C-Suite", email: "lucia@roamio.travel", verified: true, linkedin: "in/luciafernandez" },
+      ] }),
+    C({ name: "Meshify", domain: "meshify.io", industry: "AI / ML", sub: "IoT analytics",
+      country: "United States", city: "Portland", size: 39, revenue: "$3M–$5M", founded: 2020,
+      tags: ["iot", "ai", "sensors", "b2b", "data"],
+      desc: "Predictive maintenance analytics for industrial IoT sensors.",
+      contacts: [
+        { name: "Chris Walker", title: "Co-founder", seniority: "C-Suite", email: "chris@meshify.io", verified: false, linkedin: "in/chriswalker" },
+      ] }),
+    C({ name: "Brightbill", domain: "brightbill.com", industry: "Fintech", sub: "Billing",
+      country: "United Kingdom", city: "Leeds", size: 21, revenue: "$1M–$3M", founded: 2022,
+      tags: ["billing", "fintech", "subscriptions", "saas", "api"],
+      desc: "Usage-based billing engine for subscription and API businesses.",
+      contacts: [
+        { name: "Hollie Ward", title: "Founder & CEO", seniority: "C-Suite", email: "hollie@brightbill.com", verified: true, linkedin: "in/hollieward" },
+      ] }),
+    C({ name: "Sproutly", domain: "sproutly.io", industry: "Marketing", sub: "Social media",
+      country: "United States", city: "Nashville", size: 33, revenue: "$3M–$5M", founded: 2020,
+      tags: ["marketing", "social", "content", "smb", "saas"],
+      desc: "AI social scheduler and content generator for small teams.",
+      contacts: [
+        { name: "Bianca Reyes", title: "CEO", seniority: "C-Suite", email: "bianca@sproutly.io", verified: true, linkedin: "in/biancareyes" },
+      ] }),
+    C({ name: "Kingfisher Health", domain: "kingfisher.health", industry: "HealthTech", sub: "Telehealth",
+      country: "Australia", city: "Melbourne", size: 82, revenue: "$10M–$25M", founded: 2018,
+      tags: ["health", "telehealth", "consumer", "b2b", "mobile"],
+      desc: "Telehealth platform connecting rural patients with specialists.",
+      contacts: [
+        { name: "Noah Wilson", title: "CEO", seniority: "C-Suite", email: "noah@kingfisher.health", verified: true, linkedin: "in/noahwilson" },
+        { name: "Ella Brown", title: "Head of Partnerships", seniority: "Head", email: "ella@kingfisher.health", verified: true, linkedin: "in/ellabrown" },
+      ] }),
+    C({ name: "Forgeworks", domain: "forgeworks.dev", industry: "SaaS", sub: "CI/CD",
+      country: "United States", city: "San Francisco", size: 29, revenue: "$3M–$5M", founded: 2021,
+      tags: ["devtools", "cicd", "saas", "developers", "infra"],
+      desc: "Faster, cheaper CI pipelines for fast-moving engineering teams.",
+      contacts: [
+        { name: "Omar Haddad", title: "Co-founder & CEO", seniority: "C-Suite", email: "omar@forgeworks.dev", verified: true, linkedin: "in/omarhaddad" },
+      ] }),
+    C({ name: "Trustpath", domain: "trustpath.io", industry: "Cybersecurity", sub: "Identity",
+      country: "Singapore", city: "Singapore", size: 45, revenue: "$5M–$10M", founded: 2020,
+      tags: ["cyber", "identity", "fraud", "b2b", "api"],
+      desc: "Identity verification and fraud prevention API for fintechs.",
+      contacts: [
+        { name: "Wei Lim", title: "CEO", seniority: "C-Suite", email: "wei@trustpath.io", verified: true, linkedin: "in/weilim" },
+      ] }),
+    C({ name: "Harvestly", domain: "harvestly.farm", industry: "CleanTech", sub: "AgTech",
+      country: "United States", city: "Sacramento", size: 54, revenue: "$5M–$10M", founded: 2019,
+      tags: ["green", "agtech", "iot", "b2b", "data"],
+      desc: "Precision-agriculture software that cuts water and fertilizer waste.",
+      contacts: [
+        { name: "Gabriel Santos", title: "CEO & Founder", seniority: "C-Suite", email: "gabriel@harvestly.farm", verified: true, linkedin: "in/gabrielsantos" },
+      ] }),
+    C({ name: "Slatepay", domain: "slatepay.africa", industry: "Fintech", sub: "Mobile money",
+      country: "Nigeria", city: "Lagos", size: 110, revenue: "$10M–$25M", founded: 2018,
+      tags: ["fintech", "payments", "mobile", "consumer", "africa"],
+      desc: "Mobile-money wallet and merchant payments across West Africa.",
+      contacts: [
+        { name: "Chinwe Obi", title: "CEO", seniority: "C-Suite", email: "chinwe@slatepay.africa", verified: true, linkedin: "in/chinweobi" },
+        { name: "Tunde Bello", title: "VP Growth", seniority: "VP", email: "tunde@slatepay.africa", verified: false, linkedin: "in/tundebello" },
+      ] }),
+    C({ name: "Pixelmint", domain: "pixelmint.design", industry: "Marketing", sub: "Creative tools",
+      country: "United Kingdom", city: "London", size: 17, revenue: "$1M–$3M", founded: 2022,
+      tags: ["marketing", "design", "creative", "smb", "ai"],
+      desc: "AI brand-asset generator for agencies and in-house creative teams.",
+      contacts: [
+        { name: "Ruby Hall", title: "Founder", seniority: "C-Suite", email: "ruby@pixelmint.design", verified: true, linkedin: "in/rubyhall" },
+      ] }),
+  ];
+
+  // Fix a stray non-ascii name introduced above
+  companies.forEach((c) => { if (c.name === "Roамio") c.name = "Roamio"; });
+
+  return { companies, industries };
+})();
+
+</script>
+<script>
+/* Explee clone — application logic
+ * - Natural-language ICP parsing
+ * - Semantic-style scoring / search over the built-in prospect DB
+ * - Filters, lead lists (localStorage), CSV export, AI outreach drafting
+ */
+(function () {
+  "use strict";
+
+  const DB = window.EXPLEE_DB;
+  const COMPANIES = DB.companies;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+  // ------------------------------------------------------------------ state
+  const state = {
+    query: "",
+    parsed: null,
+    results: [],
+    filters: { industries: new Set(), size: "any", country: "", verifiedOnly: false, sort: "match" },
+    list: loadList(),
+    lastCompanyId: null,
+  };
+
+  const FAV_COLORS = ["#6c5ce7", "#00b894", "#0984e3", "#e17055", "#e84393", "#fdcb6e", "#00cec9", "#a29bfe"];
+  const favColor = (name) => FAV_COLORS[[...name].reduce((a, c) => a + c.charCodeAt(0), 0) % FAV_COLORS.length];
+  const initials = (n) => n.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+
+  // ------------------------------------------------------------------ NL parsing
+  const COUNTRY_ALIASES = {
+    "uk": "United Kingdom", "united kingdom": "United Kingdom", "britain": "United Kingdom", "england": "United Kingdom",
+    "us": "United States", "usa": "United States", "united states": "United States", "america": "United States",
+    "germany": "Germany", "france": "France", "canada": "Canada", "netherlands": "Netherlands",
+    "australia": "Australia", "india": "India", "ireland": "Ireland", "sweden": "Sweden",
+    "spain": "Spain", "singapore": "Singapore", "nigeria": "Nigeria", "africa": "Nigeria",
+    "europe": "__EUROPE__",
+  };
+  const EUROPE = ["United Kingdom", "Germany", "France", "Netherlands", "Ireland", "Sweden", "Spain"];
+
+  const INDUSTRY_KEYWORDS = {
+    "Fintech": ["fintech", "finance", "financial", "payments", "payment", "banking", "lending", "payroll", "billing"],
+    "SaaS": ["saas", "software", "b2b software", "platform", "devtools", "developer tools", "productivity"],
+    "E-commerce": ["ecommerce", "e-commerce", "commerce", "retail", "dtc", "shopify", "online store"],
+    "HealthTech": ["health", "healthtech", "healthcare", "medical", "clinical", "telehealth", "medtech"],
+    "AI / ML": ["ai", "artificial intelligence", "machine learning", "ml", "llm", "computer vision", "data"],
+    "Marketing": ["marketing", "adtech", "ads", "advertising", "social media", "content", "demand gen"],
+    "EdTech": ["edtech", "education", "learning", "training", "lms", "e-learning"],
+    "Logistics": ["logistics", "supply chain", "delivery", "warehouse", "fulfillment", "shipping"],
+    "Cybersecurity": ["cybersecurity", "security", "infosec", "cyber", "fraud", "identity"],
+    "CleanTech": ["cleantech", "climate", "green", "solar", "energy", "carbon", "esg", "agtech", "sustainability"],
+  };
+
+  function parseQuery(q) {
+    const text = " " + q.toLowerCase() + " ";
+    const parsed = { raw: q, industries: [], country: null, sizeMin: null, sizeMax: null, keywords: [] };
+
+    // industries
+    for (const [ind, kws] of Object.entries(INDUSTRY_KEYWORDS)) {
+      if (kws.some((k) => text.includes(" " + k) || text.includes(k + " "))) parsed.industries.push(ind);
+    }
+
+    // country
+    for (const [alias, canonical] of Object.entries(COUNTRY_ALIASES)) {
+      if (text.includes(" " + alias + " ") || text.includes(" in " + alias) || text.endsWith(alias + " ")) {
+        parsed.country = canonical; break;
+      }
+    }
+
+    // size — "under 30", "under 30 employees", "less than 50", "over 100", "10-50", "50+"
+    let m;
+    if ((m = text.match(/under (\d+)/)) || (m = text.match(/less than (\d+)/)) || (m = text.match(/fewer than (\d+)/))) {
+      parsed.sizeMax = +m[1];
+    }
+    if ((m = text.match(/over (\d+)/)) || (m = text.match(/more than (\d+)/)) || (m = text.match(/(\d+)\+/))) {
+      parsed.sizeMin = +m[1];
+    }
+    if ((m = text.match(/(\d+)\s*[-–to]+\s*(\d+)/))) { parsed.sizeMin = +m[1]; parsed.sizeMax = +m[2]; }
+    if (/\bstartups?\b|\bearly[- ]stage\b|\bseed\b/.test(text) && parsed.sizeMax == null && parsed.sizeMin == null) {
+      parsed.sizeMax = 50; // heuristic: "startups" => small
+    }
+    if (/\benterprise\b|\blarge\b/.test(text) && parsed.sizeMin == null) parsed.sizeMin = 100;
+
+    // free keywords (for semantic match) — words not consumed by structure
+    const stop = new Set(["in","the","a","an","and","or","of","with","for","under","over","less","than","more","fewer",
+      "startups","startup","companies","company","employees","people","that","are","is","find","show","me","to","using","who"]);
+    parsed.keywords = q.toLowerCase().replace(/[^a-z0-9\s-]/g, " ").split(/\s+/)
+      .filter((w) => w && w.length > 2 && !stop.has(w) && isNaN(+w));
+
+    return parsed;
+  }
+
+  // ------------------------------------------------------------------ scoring
+  function scoreCompany(c, p) {
+    let score = 0, reasons = 0;
+
+    if (p.industries.length) {
+      if (p.industries.includes(c.industry)) { score += 45; reasons++; }
+      else return { score: 0 }; // hard filter on explicit industry
+    }
+    if (p.country) {
+      const ok = p.country === "__EUROPE__" ? EUROPE.includes(c.country) : c.country === p.country;
+      if (ok) { score += 25; reasons++; } else return { score: 0 };
+    }
+    if (p.sizeMax != null) { if (c.size <= p.sizeMax) { score += 15; reasons++; } else return { score: 0 }; }
+    if (p.sizeMin != null) { if (c.size >= p.sizeMin) { score += 15; reasons++; } else return { score: 0 }; }
+
+    // semantic-ish keyword match on tags + text
+    const hay = (c.name + " " + c.desc + " " + c.sub + " " + c.tags.join(" ")).toLowerCase();
+    let kwHits = 0;
+    p.keywords.forEach((k) => { if (hay.includes(k)) { kwHits++; } });
+    if (p.keywords.length) {
+      const frac = kwHits / p.keywords.length;
+      score += Math.round(frac * 30);
+      if (kwHits) reasons++;
+    }
+
+    // baseline relevance so broad queries still rank sensibly
+    if (reasons === 0) score += 18;
+    score += Math.min(8, c.contacts.filter((x) => x.verified).length * 4); // richer data ranks higher
+
+    // Map the raw signal into a realistic 58–99 band with small deterministic jitter,
+    // so results differentiate instead of all pinning to the ceiling.
+    const jitter = ([...c.name].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 5) - 2; // -2..+2
+    const final = Math.max(55, Math.min(99, Math.round(58 + score * 0.34 + jitter)));
+    return { score: final };
+  }
+
+  function runSearch(q) {
+    state.query = q;
+    state.parsed = parseQuery(q);
+    const scored = COMPANIES
+      .map((c) => ({ c, s: scoreCompany(c, state.parsed).score }))
+      .filter((x) => x.s > 0)
+      .sort((a, b) => b.s - a.s);
+    state.results = scored.map((x) => ({ ...x.c, _match: x.s }));
+  }
+
+  // ------------------------------------------------------------------ lookalike
+  function lookalike(company) {
+    state.query = "Companies similar to " + company.name;
+    state.parsed = { raw: state.query, industries: [company.industry], country: null, sizeMin: null, sizeMax: null, keywords: company.tags.slice(), lookalikeOf: company.name };
+    const tags = new Set(company.tags);
+    const scored = COMPANIES.filter((c) => c.id !== company.id).map((c) => {
+      let s = 0;
+      if (c.industry === company.industry) s += 40;
+      const overlap = c.tags.filter((t) => tags.has(t)).length;
+      s += overlap * 12;
+      const sizeCloseness = 1 - Math.min(1, Math.abs(c.size - company.size) / 150);
+      s += sizeCloseness * 15;
+      return { c, s: Math.min(99, 45 + s) };
+    }).filter((x) => x.s >= 55).sort((a, b) => b.s - a.s).slice(0, 12);
+    state.results = scored.map((x) => ({ ...x.c, _match: Math.round(x.s) }));
+    switchView("search");
+    renderResults();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    toast(`Found ${state.results.length} lookalikes of ${company.name}`);
+  }
+
+  // ------------------------------------------------------------------ filters
+  function applyFilters(list) {
+    const f = state.filters;
+    let out = list.filter((c) => {
+      if (f.industries.size && !f.industries.has(c.industry)) return false;
+      if (f.country && c.country !== f.country) return false;
+      if (f.verifiedOnly && !c.contacts.some((x) => x.verified)) return false;
+      if (f.size !== "any") {
+        if (f.size === "1-20" && !(c.size <= 20)) return false;
+        if (f.size === "21-50" && !(c.size > 20 && c.size <= 50)) return false;
+        if (f.size === "51-100" && !(c.size > 50 && c.size <= 100)) return false;
+        if (f.size === "100+" && !(c.size > 100)) return false;
+      }
+      return true;
+    });
+    if (f.sort === "match") out.sort((a, b) => b._match - a._match);
+    if (f.sort === "size-desc") out.sort((a, b) => b.size - a.size);
+    if (f.sort === "size-asc") out.sort((a, b) => a.size - b.size);
+    if (f.sort === "name") out.sort((a, b) => a.name.localeCompare(b.name));
+    return out;
+  }
+
+  // ------------------------------------------------------------------ rendering: results
+  function renderParsed() {
+    const p = state.parsed;
+    if (!p) return "";
+    const tokens = [];
+    if (p.lookalikeOf) tokens.push(tok("lookalike", p.lookalikeOf));
+    p.industries.forEach((i) => tokens.push(tok("industry", i)));
+    if (p.country && p.country !== "__EUROPE__") tokens.push(tok("location", p.country));
+    if (p.country === "__EUROPE__") tokens.push(tok("location", "Europe"));
+    if (p.sizeMax != null && p.sizeMin != null) tokens.push(tok("size", `${p.sizeMin}–${p.sizeMax} employees`));
+    else if (p.sizeMax != null) tokens.push(tok("size", `≤ ${p.sizeMax} employees`));
+    else if (p.sizeMin != null) tokens.push(tok("size", `≥ ${p.sizeMin} employees`));
+    p.keywords.filter((k) => !p.lookalikeOf).slice(0, 4).forEach((k) => tokens.push(tok("keyword", k)));
+    if (!tokens.length) return "";
+    return `<div class="parsed"><span class="rq" style="align-self:center;margin-right:4px">AI understood:</span>${tokens.join("")}</div>`;
+  }
+  const tok = (k, v) => `<span class="token"><span class="k">${k}</span>${escapeHtml(v)}</span>`;
+
+  function renderResults() {
+    switchView("search");
+    $("#hero").style.display = "none";
+    const filtered = applyFilters(state.results);
+    const wrap = $("#results");
+    wrap.innerHTML = `
+      <div class="inline-search">
+        <span class="si">🔎</span>
+        <input id="inlineSearch" type="text" autocomplete="off" value="${escapeAttr(state.query)}" placeholder="Describe your ideal customer…" />
+        <button class="btn small" id="inlineSearchBtn">Search ✦</button>
+      </div>
+      <div class="results-head">
+        <div class="rq"><b>${applyFilters(state.results).length}</b> compan${applyFilters(state.results).length === 1 ? "y" : "ies"} match your search</div>
+        <div class="actions">
+          <button class="btn ghost small" id="exportResultsBtn">⬇ Export CSV</button>
+          <button class="btn small" id="saveAllBtn">＋ Save all to list</button>
+        </div>
+      </div>
+      ${renderParsed()}
+      <div class="results-layout">
+        <aside class="filters">${renderFilters(filtered.length)}</aside>
+        <div id="cards"></div>
+      </div>`;
+    const cards = $("#cards", wrap);
+    if (!filtered.length) {
+      cards.innerHTML = `<div class="empty"><div class="em">🔍</div><b>No matches</b><p>Try widening your filters or rephrasing the search.</p></div>`;
+    } else {
+      cards.innerHTML = filtered.map(renderCard).join("");
+    }
+    wireResultsEvents(filtered);
+  }
+
+  function renderFilters(n) {
+    const inds = [...new Set(COMPANIES.map((c) => c.industry))].sort();
+    const countries = [...new Set(COMPANIES.map((c) => c.country))].sort();
+    const f = state.filters;
+    return `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <h3 style="margin:0">Filters</h3>
+        <button class="clear" id="clearFilters">Reset</button>
+      </div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:16px">${n} result${n === 1 ? "" : "s"}</div>
+      <div class="fgroup">
+        <label>Industry</label>
+        ${inds.map((i) => `<label class="fopt"><input type="checkbox" data-ind="${i}" ${f.industries.has(i) ? "checked" : ""}>${i}</label>`).join("")}
+      </div>
+      <div class="fgroup">
+        <label>Company size</label>
+        <select class="fselect" id="sizeFilter">
+          ${["any","1-20","21-50","51-100","100+"].map((s) => `<option value="${s}" ${f.size === s ? "selected" : ""}>${s === "any" ? "Any size" : s + " employees"}</option>`).join("")}
+        </select>
+      </div>
+      <div class="fgroup">
+        <label>Location</label>
+        <select class="fselect" id="countryFilter">
+          <option value="">Any location</option>
+          ${countries.map((c) => `<option value="${c}" ${f.country === c ? "selected" : ""}>${c}</option>`).join("")}
+        </select>
+      </div>
+      <div class="fgroup">
+        <label class="fopt"><input type="checkbox" id="verifiedOnly" ${f.verifiedOnly ? "checked" : ""}> Verified email only</label>
+      </div>
+      <div class="fgroup">
+        <label>Sort by</label>
+        <select class="fselect" id="sortFilter">
+          <option value="match" ${f.sort === "match" ? "selected" : ""}>Best match</option>
+          <option value="size-desc" ${f.sort === "size-desc" ? "selected" : ""}>Largest first</option>
+          <option value="size-asc" ${f.sort === "size-asc" ? "selected" : ""}>Smallest first</option>
+          <option value="name" ${f.sort === "name" ? "selected" : ""}>Name A–Z</option>
+        </select>
+      </div>`;
+  }
+
+  function renderCard(c) {
+    const verified = c.contacts.filter((x) => x.verified).length;
+    const inList = state.list.some((x) => x.id === c.id);
+    const cls = c._match >= 75 ? "match" : "match mid";
+    return `
+      <div class="card" data-id="${c.id}">
+        <div class="fav" style="background:${favColor(c.name)}">${initials(c.name)}</div>
+        <div>
+          <div class="cname">
+            <h4>${escapeHtml(c.name)}</h4>
+            <span class="dom">${escapeHtml(c.domain)}</span>
+          </div>
+          <div class="cdesc">${escapeHtml(c.desc)}</div>
+          <div class="meta">
+            <span>🏷 ${c.industry}</span>
+            <span>📍 ${c.city}, ${c.country}</span>
+            <span>👥 ${c.size} employees</span>
+            <span>💰 ${c.revenue}</span>
+            <span>📅 Founded ${c.founded}</span>
+          </div>
+          <div class="tagrow">${c.tags.slice(0, 5).map((t) => `<span class="tag">${t}</span>`).join("")}</div>
+        </div>
+        <div class="right">
+          <span class="${cls}">${c._match}% match</span>
+          <span class="contacts-badge">${c.contacts.length} contact${c.contacts.length === 1 ? "" : "s"} · ${verified} verified</span>
+          <button class="btn small ${inList ? "ghost" : ""}" data-save="${c.id}">${inList ? "✓ Saved" : "＋ Save"}</button>
+          <button class="btn ghost small" data-view="${c.id}">View</button>
+        </div>
+      </div>`;
+  }
+
+  function wireResultsEvents(filtered) {
+    const inline = $("#inlineSearch");
+    const runInline = () => { const q = inline.value.trim(); if (!q) return; state.filters = { industries: new Set(), size: "any", country: "", verifiedOnly: false, sort: "match" }; $("#results").innerHTML = `<div class="loading"><div class="spinner"></div>Scanning 75M companies for “${escapeHtml(q)}”…</div>`; setTimeout(() => { runSearch(q); renderResults(); }, 500); };
+    $("#inlineSearchBtn").onclick = runInline;
+    inline.addEventListener("keydown", (e) => { if (e.key === "Enter") runInline(); });
+    $("#exportResultsBtn").onclick = () => exportCSV(filtered, "explee-results.csv");
+    $("#saveAllBtn").onclick = () => { filtered.forEach(saveToList); renderResults(); toast(`Saved ${filtered.length} companies to your list`); };
+    $("#clearFilters").onclick = () => { state.filters = { industries: new Set(), size: "any", country: "", verifiedOnly: false, sort: "match" }; renderResults(); };
+    $$("[data-ind]").forEach((el) => el.onchange = () => { el.checked ? state.filters.industries.add(el.dataset.ind) : state.filters.industries.delete(el.dataset.ind); renderResults(); });
+    $("#sizeFilter").onchange = (e) => { state.filters.size = e.target.value; renderResults(); };
+    $("#countryFilter").onchange = (e) => { state.filters.country = e.target.value; renderResults(); };
+    $("#verifiedOnly").onchange = (e) => { state.filters.verifiedOnly = e.target.checked; renderResults(); };
+    $("#sortFilter").onchange = (e) => { state.filters.sort = e.target.value; renderResults(); };
+    $$("[data-save]").forEach((b) => b.onclick = (e) => { e.stopPropagation(); const c = COMPANIES.find((x) => x.id === b.dataset.save); saveToList(c); renderResults(); toast(`${c.name} saved to list`); });
+    $$("[data-view]").forEach((b) => b.onclick = () => openCompany(b.dataset.view));
+    $$(".card").forEach((card) => card.onclick = (e) => { if (e.target.closest("button")) return; openCompany(card.dataset.id); });
+  }
+
+  // ------------------------------------------------------------------ company modal
+  function openCompany(id) {
+    const base = COMPANIES.find((x) => x.id === id);
+    if (!base) return;
+    const fromResults = state.results.find((x) => x.id === id);
+    const c = fromResults || base; // prefer the scored result so _match is available
+    state.lastCompanyId = id;
+    const inList = state.list.some((x) => x.id === c.id);
+    const body = `
+      <div class="modal-head">
+        <div class="fav" style="background:${favColor(c.name)}">${initials(c.name)}</div>
+        <div>
+          <h2>${escapeHtml(c.name)}</h2>
+          <div class="sub">${escapeHtml(c.sub)} · <a href="${c.website}" target="_blank" rel="noopener" style="color:var(--brand-2)">${escapeHtml(c.domain)} ↗</a></div>
+        </div>
+        <button class="x" id="closeModal">×</button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--muted);font-size:14px;line-height:1.6;margin-bottom:20px">${escapeHtml(c.desc)}</p>
+        <div class="kv">
+          <div><div class="k">Industry</div><div class="v">${c.industry}</div></div>
+          <div><div class="k">Headquarters</div><div class="v">${c.city}, ${c.country}</div></div>
+          <div><div class="k">Employees</div><div class="v">${c.size}</div></div>
+          <div><div class="k">Est. revenue</div><div class="v">${c.revenue}</div></div>
+          <div><div class="k">Founded</div><div class="v">${c.founded}</div></div>
+          <div><div class="k">Match score</div><div class="v" style="color:var(--green)">${c._match || "—"}%</div></div>
+        </div>
+        <div class="sec-title">Decision makers (${c.contacts.length})</div>
+        <div id="contactList">
+          ${c.contacts.map((p) => `
+            <div class="contact">
+              <div class="ci">${initials(p.name)}</div>
+              <div>
+                <div class="cn">${escapeHtml(p.name)}</div>
+                <div class="ct">${escapeHtml(p.title)} · ${p.seniority}</div>
+                <div class="em">${escapeHtml(p.email)}</div>
+              </div>
+              <div class="cright">
+                <span class="vbadge ${p.verified ? "ok" : "no"}">${p.verified ? "✓ Verified" : "◷ Unverified"}</span>
+                <button class="btn ghost small" data-draft="${escapeAttr(p.name)}">✦ Draft email</button>
+              </div>
+            </div>`).join("")}
+        </div>
+        <div class="sec-title" style="margin-top:24px">AI outreach draft</div>
+        <div class="aibox">
+          <textarea id="aiMsg" placeholder="Click ✦ Draft email on a contact, or Generate below, to write a personalized opener…"></textarea>
+          <div class="row">
+            <button class="btn small" id="genMsg">✦ Generate message</button>
+            <button class="btn ghost small" id="copyMsg">⧉ Copy</button>
+            <span class="hint">Personalized from company + contact context</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn ${inList ? "ghost" : ""}" id="modalSave">${inList ? "✓ Saved to list" : "＋ Save to list"}</button>
+        <button class="btn ghost" id="lookalikeBtn">◎ Find lookalikes</button>
+        <button class="btn ghost" id="exportOne">⬇ Export this company</button>
+      </div>`;
+    $("#modalContent").innerHTML = body;
+    $("#modalBg").classList.add("open");
+
+    $("#closeModal").onclick = closeModal;
+    $("#modalSave").onclick = () => { saveToList(c); openCompany(id); renderResults(); toast(`${c.name} saved to list`); };
+    $("#lookalikeBtn").onclick = () => { closeModal(); lookalike(c); };
+    $("#exportOne").onclick = () => exportCSV([c], `${c.domain}.csv`);
+    $("#genMsg").onclick = () => { $("#aiMsg").value = draftMessage(c, c.contacts[0]); };
+    $("#copyMsg").onclick = () => { copyText($("#aiMsg").value); toast("Message copied"); };
+    $$("[data-draft]").forEach((b) => b.onclick = () => { const p = c.contacts.find((x) => x.name === b.dataset.draft); $("#aiMsg").value = draftMessage(c, p); $("#aiMsg").scrollIntoView({ behavior: "smooth", block: "center" }); });
+  }
+  function closeModal() { $("#modalBg").classList.remove("open"); }
+
+  // Template-driven "AI" personalization (deterministic, offline)
+  function draftMessage(c, contact) {
+    const first = contact.name.split(" ")[0];
+    const role = /founder|ceo|chief exec/i.test(contact.title) ? "building" : "leading";
+    return `Hi ${first},
+
+I came across ${c.name} — "${c.desc}" Really like what you're ${role} in the ${c.industry.toLowerCase()} space out of ${c.city}.
+
+We help ${c.industry} teams around your size (~${c.size} people) turn a plain-English description of their ideal customer into a verified lead list in seconds — no manual list-building. Given you're scaling ${c.sub.toLowerCase()}, I thought it might be worth a look.
+
+Open to a quick 15-minute call next week?
+
+Best,
+{{your name}}`;
+  }
+
+  // ------------------------------------------------------------------ lists (localStorage)
+  function loadList() { try { return JSON.parse(localStorage.getItem("explee_list") || "[]"); } catch (e) { return []; } }
+  function persistList() { try { localStorage.setItem("explee_list", JSON.stringify(state.list)); } catch (e) {} updateListBadge(); }
+  function saveToList(c) {
+    if (state.list.some((x) => x.id === c.id)) return;
+    state.list.push({ id: c.id, name: c.name, domain: c.domain, industry: c.industry, city: c.city, country: c.country,
+      size: c.size, revenue: c.revenue, contacts: c.contacts });
+    persistList();
+  }
+  function removeFromList(id) { state.list = state.list.filter((x) => x.id !== id); persistList(); renderLists(); }
+  function updateListBadge() { const n = state.list.length; $("#listBadge").textContent = n; $("#listBadge").style.display = n ? "inline-block" : "none"; }
+
+  function renderLists() {
+    const rows = [];
+    state.list.forEach((c) => {
+      const primary = c.contacts[0] || {};
+      rows.push(`
+        <tr>
+          <td class="co">${escapeHtml(c.name)}<div style="font-size:11.5px;color:var(--faint)">${escapeHtml(c.domain)}</div></td>
+          <td>${c.industry}</td>
+          <td>${c.city}, ${c.country}</td>
+          <td>${c.size}</td>
+          <td>${escapeHtml(primary.name || "—")}<div style="font-size:11.5px;color:var(--faint)">${escapeHtml(primary.title || "")}</div></td>
+          <td class="em">${escapeHtml(primary.email || "—")} ${primary.verified ? '<span class="saved-flag">✓</span>' : ""}</td>
+          <td style="text-align:right"><button class="remove" data-rm="${c.id}" title="Remove">✕</button></td>
+        </tr>`);
+    });
+    $("#listView").innerHTML = `
+      <div class="list-head">
+        <div>
+          <h1>My lead list</h1>
+          <div style="color:var(--muted);font-size:14px;margin-top:4px">${state.list.length} compan${state.list.length === 1 ? "y" : "ies"} · ${state.list.reduce((a, c) => a + c.contacts.length, 0)} contacts</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" id="clearListBtn" ${state.list.length ? "" : "disabled"}>Clear list</button>
+          <button class="btn" id="exportListBtn" ${state.list.length ? "" : "disabled"}>⬇ Export CSV</button>
+        </div>
+      </div>
+      ${state.list.length ? `
+      <table class="table">
+        <thead><tr><th>Company</th><th>Industry</th><th>Location</th><th>Size</th><th>Primary contact</th><th>Email</th><th></th></tr></thead>
+        <tbody>${rows.join("")}</tbody>
+      </table>` : `<div class="empty"><div class="em">📋</div><b>Your list is empty</b><p>Run a search and hit “Save” on companies to build a targeted lead list.</p><button class="btn" id="goSearch" style="margin-top:16px">Start a search</button></div>`}`;
+
+    if (state.list.length) {
+      $("#exportListBtn").onclick = () => exportContactsCSV(state.list, "explee-lead-list.csv");
+      $("#clearListBtn").onclick = () => { if (confirm("Clear your entire lead list?")) { state.list = []; persistList(); renderLists(); } };
+      $$("[data-rm]").forEach((b) => b.onclick = () => removeFromList(b.dataset.rm));
+    } else {
+      $("#goSearch").onclick = () => { switchView("search"); $("#searchInput").focus(); };
+    }
+  }
+
+  // ------------------------------------------------------------------ CSV export
+  function exportCSV(companies, filename) {
+    const header = ["Company", "Domain", "Industry", "City", "Country", "Employees", "Revenue", "Match %", "Contacts", "Verified emails"];
+    const rows = companies.map((c) => [c.name, c.domain, c.industry, c.city, c.country, c.size, c.revenue, c._match || "",
+      c.contacts.length, c.contacts.filter((x) => x.verified).length]);
+    download(filename, toCSV([header, ...rows]));
+    toast(`Exported ${companies.length} companies`);
+  }
+  function exportContactsCSV(companies, filename) {
+    const header = ["Company", "Domain", "Industry", "Location", "Employees", "Contact name", "Title", "Seniority", "Email", "Email status", "LinkedIn"];
+    const rows = [];
+    companies.forEach((c) => c.contacts.forEach((p) => rows.push([c.name, c.domain, c.industry, `${c.city}, ${c.country}`, c.size,
+      p.name, p.title, p.seniority, p.email, p.verified ? "Verified" : "Unverified", "linkedin.com/" + p.linkedin])));
+    download(filename, toCSV([header, ...rows]));
+    toast(`Exported ${rows.length} contacts`);
+  }
+  function toCSV(rows) { return rows.map((r) => r.map((v) => { const s = String(v == null ? "" : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(",")).join("\n"); }
+
+  async function download(filename, text) {
+    // Hosted-artifact path: the sandbox blocks direct downloads, so use the
+    // downloads capability when the page is running inside claude.ai.
+    const dl = window.claude && window.claude.use ? await window.claude.use("downloads").catch(() => null) : null;
+    if (dl) {
+      try {
+        await dl.save({ filename, data: text });
+      } catch (e) {
+        if (e && e.code === "extension_not_enabled") {
+          try { await dl.save({ filename: filename.replace(/\.csv$/, ".txt"), data: text }); }
+          catch (e2) { if (e2 && e2.code === "declined") return; toast("Export unavailable in this view"); }
+        } else if (e && e.code === "declined") { return; }
+        else { toast("Export unavailable in this view"); }
+      }
+      return;
+    }
+    // Local / standalone path: classic blob download.
+    const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ------------------------------------------------------------------ misc UI
+  function switchView(name) {
+    $$(".view").forEach((v) => v.classList.toggle("active", v.dataset.view === name));
+    $$(".topnav button").forEach((b) => b.classList.toggle("active", b.dataset.nav === name));
+    if (name === "lists") renderLists();
+  }
+  function toast(msg) {
+    const t = document.createElement("div");
+    t.className = "toast"; t.innerHTML = `<span class="dot"></span>${escapeHtml(msg)}`;
+    $("#toasts").appendChild(t);
+    setTimeout(() => { t.style.opacity = "0"; t.style.transition = "0.3s"; setTimeout(() => t.remove(), 300); }, 2600);
+  }
+  function copyText(t) { navigator.clipboard && navigator.clipboard.writeText(t).catch(() => {}); }
+  function escapeHtml(s) { return String(s).replace(/[&<>"']/g, (m) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[m])); }
+  function escapeAttr(s) { return escapeHtml(s).replace(/"/g, "&quot;"); }
+
+  function doSearch() {
+    const q = $("#searchInput").value.trim();
+    if (!q) { $("#searchInput").focus(); return; }
+    $("#hero").style.display = "none";
+    $("#results").innerHTML = `<div class="loading"><div class="spinner"></div>Scanning 75M companies for “${escapeHtml(q)}”…</div>`;
+    switchView("search");
+    setTimeout(() => { runSearch(q); renderResults(); }, 650); // simulate query latency
+  }
+
+  // ------------------------------------------------------------------ init
+  function init() {
+    $("#searchBtn").onclick = doSearch;
+    $("#searchInput").addEventListener("keydown", (e) => { if (e.key === "Enter") doSearch(); });
+    $$(".chip").forEach((ch) => ch.onclick = () => { $("#searchInput").value = ch.dataset.q; doSearch(); });
+    $$(".topnav button").forEach((b) => b.onclick = () => {
+      switchView(b.dataset.nav);
+      if (b.dataset.nav === "search" && !state.results.length) { $("#hero").style.display = ""; }
+    });
+    $("#modalBg").onclick = (e) => { if (e.target.id === "modalBg") closeModal(); };
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+    $("#brandHome").onclick = () => { switchView("search"); $("#hero").style.display = ""; $("#results").innerHTML = ""; $("#searchInput").value = ""; };
+    updateListBadge();
+    // expose a couple hooks for testing
+    window.__explee = { runSearch, state, doSearch };
+  }
+  document.addEventListener("DOMContentLoaded", init);
+})();
+
+</script>

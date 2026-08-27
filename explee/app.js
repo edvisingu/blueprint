@@ -474,7 +474,24 @@ Best,
     toast(`Exported ${rows.length} contacts`);
   }
   function toCSV(rows) { return rows.map((r) => r.map((v) => { const s = String(v == null ? "" : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(",")).join("\n"); }
-  function download(filename, text) {
+
+  async function download(filename, text) {
+    // Hosted-artifact path: the sandbox blocks direct downloads, so use the
+    // downloads capability when the page is running inside claude.ai.
+    const dl = window.claude && window.claude.use ? await window.claude.use("downloads").catch(() => null) : null;
+    if (dl) {
+      try {
+        await dl.save({ filename, data: text });
+      } catch (e) {
+        if (e && e.code === "extension_not_enabled") {
+          try { await dl.save({ filename: filename.replace(/\.csv$/, ".txt"), data: text }); }
+          catch (e2) { if (e2 && e2.code === "declined") return; toast("Export unavailable in this view"); }
+        } else if (e && e.code === "declined") { return; }
+        else { toast("Export unavailable in this view"); }
+      }
+      return;
+    }
+    // Local / standalone path: classic blob download.
     const blob = new Blob([text], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a"); a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
