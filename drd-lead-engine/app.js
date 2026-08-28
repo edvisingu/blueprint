@@ -1217,19 +1217,62 @@
     }
   }
 
+  function renderLogin(message) {
+    document.querySelector(".app").style.display = "none";
+    let el = $("#loginscreen");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "loginscreen";
+      document.body.appendChild(el);
+    }
+    el.innerHTML =
+      '<div class="login-wrap"><form class="login-card" id="loginform">' +
+        '<div class="login-brand"><span class="mono">DD</span></div>' +
+        "<h1>Dr.&nbsp;D Lead Engineering System</h1>" +
+        "<p>Sign in to reach the engine.</p>" +
+        '<label class="field"><span>Password</span>' +
+        '<input class="input" type="password" id="loginpw" autocomplete="current-password" autofocus></label>' +
+        (message ? '<div class="login-err">' + esc(message) + "</div>" : "") +
+        '<button class="btn" type="submit" style="width:100%;justify-content:center">Sign in</button>' +
+      "</form></div>";
+    $("#loginform").onsubmit = async (e) => {
+      e.preventDefault();
+      const pw = $("#loginpw").value;
+      try {
+        await WS.auth.login(pw);
+        el.remove();
+        document.querySelector(".app").style.display = "";
+        await boot();
+      } catch (err) {
+        renderLogin(err.status === 401 ? "That password is not right." : "Sign-in failed. Try again.");
+      }
+    };
+  }
+
+  async function boot() {
+    try {
+      $("#page").innerHTML = '<div class="loading"><div class="spin"></div>Connecting to the engine\u2026</div>';
+      ws = await WS.hydrate();
+    } catch (e) {
+      toast("Backend unreachable, using local demo data");
+    }
+    renderNav();
+    paintStatus();
+    go("overview");
+    window.__drd = { ws, state, go, E, D, WS };
+  }
+
   async function init() {
     $("#veil").onclick = closeDrawer;
     document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
 
-    // Served by the API? Hydrate from the database. Otherwise stay on the
-    // seeded local workspace so the page still works opened straight off disk.
+    // Served by the API? Check the session, then hydrate from the database.
+    // Opened straight off disk it falls back to the seeded local workspace.
     if (WS.hasApi()) {
-      try {
-        $("#page").innerHTML = '<div class="loading"><div class="spin"></div>Connecting to the engine\u2026</div>';
-        ws = await WS.hydrate();
-      } catch (e) {
-        toast("Backend unreachable, using local demo data");
-      }
+      let me = null;
+      try { me = await WS.auth.me(); } catch (e) {}
+      if (me && me.login_required && !me.authenticated) return renderLogin("");
+      return boot();
     }
 
     renderNav();

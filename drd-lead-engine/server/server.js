@@ -2,6 +2,7 @@
  * Zero dependencies: node:http + node:sqlite.
  */
 const http = require("http");
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
@@ -11,6 +12,57 @@ const { DATA, ENGINE } = require("./shared.js");
 const AI = require("./ai.js");
 
 const ROOT = path.join(__dirname, "..");
+
+// ---------------------------------------------------------------- security
+// PUBLIC=1 (or NODE_ENV=production) means the server is internet-facing:
+// an admin password and a stable session secret then become mandatory.
+const PUBLIC = process.env.DRD_PUBLIC === "1" || process.env.NODE_ENV === "production";
+const ADMIN_PASSWORD = process.env.DRD_ADMIN_PASSWORD || "";
+const SESSION_SECRET = process.env.DRD_SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+const COOKIE = "drd_session";
+
+if (PUBLIC && !ADMIN_PASSWORD) {
+  console.error("REFUSING TO START: DRD_ADMIN_PASSWORD must be set when DRD_PUBLIC=1.");
+  console.error("A public deployment without a password would expose the whole API.");
+  process.exit(1);
+}
+if (PUBLIC && !process.env.DRD_SESSION_SECRET) {
+  console.error("REFUSING TO START: DRD_SESSION_SECRET must be set when DRD_PUBLIC=1.");
+  console.error("Without a stable secret every restart would silently log everyone out.");
+  process.exit(1);
+}
+
+function signSession(expires) {
+  const mac = crypto.createHmac("sha256", SESSION_SECRET).update(String(expires)).digest("hex");
+  return expires + "." + mac;
+}
+function verifySession(raw) {
+  if (!raw || raw.indexOf(".") < 0) return false;
+  const [exp, mac] = raw.split(".");
+  if (!/^\d+$/.test(exp) || +exp < Date.now()) return false;
+  const expect = crypto.createHmac("sha256", SESSION_SECRET).update(exp).digest("hex");
+  const a = Buffer.from(mac || "", "utf8"), b = Buffer.from(expect, "utf8");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+function readCookie(req, name) {
+  const raw = req.headers.cookie || "";
+  for (const part of raw.split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return null;
+}
+function isSecureReq(req) {
+  return (req.headers["x-forwarded-proto"] || "").split(",")[0].trim() === "https";
+}
+// Constant-time password comparison, length-safe.
+function passwordMatches(given) {
+  if (!ADMIN_PASSWORD || typeof given !== "string") return false;
+  const a = crypto.createHash("sha256").update(given).digest();
+  const b = crypto.createHash("sha256").update(ADMIN_PASSWORD).digest();
+  return crypto.timingSafeEqual(a, b);
+}
 const RATE = { windowMs: 60000, max: 300 };
 const buckets = new Map();
 
@@ -68,6 +120,23 @@ function create(opts) {
   // ------------------------------------------------------------------ routes
   const routes = [];
   const R = (method, pattern, handler, publicRoute) => routes.push({ method, pattern, handler, publicRoute });
+
+  R("POST", /^\/v1\/auth\/login$/, (ctx) => {
+    if (!ADMIN_PASSWORD) return { status: 503, body: { error: "login_disabled", message: "No admin password configured on this server." } };
+    if (!passwordMatches(ctx.body && ctx.body.password))
+      return { status: 401, body: { error: "invalid_password" } };
+    const expires = Date.now() + SESSION_TTL_MS;
+    const flags = ["HttpOnly", "Path=/", "SameSite=Lax", "Max-Age=" + Math.floor(SESSION_TTL_MS / 1000)];
+    if (isSecureReq(ctx.req) || PUBLIC) flags.push("Secure");
+    return { status: 200, body: { ok: true, expires },
+      headers: { "set-cookie": COOKIE + "=" + encodeURIComponent(signSession(expires)) + "; " + flags.join("; ") } };
+  }, true);
+
+  R("POST", /^\/v1\/auth\/logout$/, () => ({ status: 200, body: { ok: true },
+    headers: { "set-cookie": COOKIE + "=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0" } }), true);
+
+  R("GET", /^\/v1\/auth\/me$/, (ctx) => ({ status: 200, body: {
+    authenticated: !!ctx.org, login_required: !!ADMIN_PASSWORD } }), true);
 
   R("GET", /^\/v1\/health$/, () => ({ status: 200, body: { ok: true, provider: AI.provider(), model: AI.model } }), true);
 
@@ -483,25 +552,39 @@ function create(opts) {
     if (!file.startsWith(ROOT) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
       res.writeHead(404, { "content-type": "text/plain" }); res.end("Not found"); return;
     }
-    res.writeHead(200, { "content-type": MIME[path.extname(file)] || "application/octet-stream" });
+    res.writeHead(200, Object.assign(
+      { "content-type": MIME[path.extname(file)] || "application/octet-stream" },
+      { "x-content-type-options": "nosniff", "referrer-policy": "same-origin" }));
     fs.createReadStream(file).pipe(res);
   }
 
   const server = http.createServer(async (req, res) => {
     const started = Date.now();
     const u = new URL(req.url, "http://localhost");
-    const send = (status, body) => {
+    const SEC = {
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "referrer-policy": "same-origin",
+    };
+    if (PUBLIC) SEC["strict-transport-security"] = "max-age=31536000; includeSubDomains";
+
+    const send = (status, body, extra) => {
       const payload = J(body);
-      res.writeHead(status, { "content-type": "application/json", "content-length": Buffer.byteLength(payload) });
+      res.writeHead(status, Object.assign({
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(payload),
+        "cache-control": "no-store",
+      }, SEC, extra || {}));
       res.end(payload);
       log(`${req.method} ${u.pathname} ${status} ${Date.now() - started}ms`);
     };
 
     if (u.pathname === "/config.js") {
-      let tok = "";
-      try { tok = fs.readFileSync(path.join(__dirname, ".dev-token"), "utf8").trim(); } catch (e) {}
-      const js = `window.DRD_API_BASE="";window.DRD_API_TOKEN=${J(tok)};`;
-      res.writeHead(200, { "content-type": "text/javascript", "cache-control": "no-store" });
+      // The browser authenticates with an httpOnly session cookie. No key is
+      // ever shipped to the client; API keys are for server-to-server callers.
+      const js = 'window.DRD_API_BASE="";window.DRD_AUTH="cookie";window.DRD_LOGIN_REQUIRED=' +
+        (ADMIN_PASSWORD ? "true" : "false") + ";";
+      res.writeHead(200, Object.assign({ "content-type": "text/javascript", "cache-control": "no-store" }, SEC));
       return res.end(js);
     }
     if (!u.pathname.startsWith("/v1/")) return serveStatic(req, res, u.pathname);
@@ -509,23 +592,36 @@ function create(opts) {
     const route = routes.find((r) => r.method === req.method && r.pattern.test(u.pathname));
     if (!route) return send(404, { error: "not_found", path: u.pathname });
 
-    // auth
-    let org = null, actor = "api";
-    if (!route.publicRoute) {
-      const auth = req.headers.authorization || "";
-      const token = auth.startsWith("Bearer ") ? auth.slice(7) : null;
-      if (!token) return send(401, { error: "missing_token", message: "Send Authorization: Bearer <api key>." });
-      const key = db.prepare("SELECT * FROM api_keys WHERE token_hash=? AND revoked=0").get(hashToken(token));
+    // ---- identity: session cookie (browser) or bearer key (server-to-server)
+    let org = null, actor = "api", rateKey = null;
+    const authHeader = req.headers.authorization || "";
+    const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+    if (bearer) {
+      const key = db.prepare("SELECT * FROM api_keys WHERE token_hash=? AND revoked=0").get(hashToken(bearer));
       if (!key) return send(401, { error: "invalid_token" });
       db.prepare("UPDATE api_keys SET last_used_at=? WHERE id=?").run(Date.now(), key.id);
       org = db.prepare("SELECT * FROM organizations WHERE id=?").get(key.org_id);
-      actor = key.name;
+      actor = key.name; rateKey = key.id;
+    } else if (verifySession(readCookie(req, COOKIE))) {
+      org = db.prepare("SELECT * FROM organizations ORDER BY created_at LIMIT 1").get();
+      actor = "browser"; rateKey = "session";
+    } else if (!ADMIN_PASSWORD && !PUBLIC) {
+      // Local development with no password set: treat the browser as the owner.
+      org = db.prepare("SELECT * FROM organizations ORDER BY created_at LIMIT 1").get();
+      actor = "local"; rateKey = "local";
+    }
 
-      // rate limit per key
+    if (!route.publicRoute && !org) {
+      return send(401, { error: "unauthorized",
+        message: "Sign in, or send Authorization: Bearer <api key>." });
+    }
+
+    if (rateKey) {
       const now = Date.now();
-      const b = buckets.get(key.id) || { start: now, n: 0 };
+      const b = buckets.get(rateKey) || { start: now, n: 0 };
       if (now - b.start > RATE.windowMs) { b.start = now; b.n = 0; }
-      b.n++; buckets.set(key.id, b);
+      b.n++; buckets.set(rateKey, b);
       if (b.n > RATE.max) return send(429, { error: "rate_limited", retry_after_ms: RATE.windowMs - (now - b.start) });
     }
 
@@ -541,7 +637,7 @@ function create(opts) {
     try {
       const m = u.pathname.match(route.pattern);
       const out = await route.handler({ org, actor, body, query: u.searchParams, req }, m);
-      send(out.status, out.body);
+      send(out.status, out.body, out.headers);
     } catch (e) {
       log("ERROR", u.pathname, e.message);
       send(500, { error: "internal_error", message: e.message });
@@ -554,6 +650,31 @@ function create(opts) {
 
 if (require.main === module) {
   const port = +(process.env.PORT || 8787);
-  create().listen(port, () => console.log(`Dr. D Lead Engineering API on http://localhost:${port}  (AI: ${AI.provider()})`));
+  const host = process.env.HOST || "0.0.0.0";
+
+  // First boot on a fresh volume: seed so the deployment is never an empty shell.
+  try {
+    const { DEFAULT_DB } = require("./db.js");
+    const probe = require("./db.js").open();
+    const n = probe.prepare("SELECT COUNT(*) n FROM companies").get().n;
+    probe.close();
+    if (n === 0) {
+      console.log("Empty database detected, seeding " + DEFAULT_DB + " ...");
+      const out = require("./seed.js").seed();
+      console.log("Seeded:", JSON.stringify(out.counts));
+      if (!process.env.DRD_ADMIN_PASSWORD) console.log("API token:", out.token);
+    }
+  } catch (e) {
+    console.error("Seed check failed:", e.message);
+  }
+
+  const server = create();
+  server.listen(port, host, () =>
+    console.log(`Dr. D Lead Engineering API on ${host}:${port}  (AI: ${AI.provider()}, public: ${PUBLIC})`));
+
+  // Graceful shutdown so SQLite closes cleanly on redeploy.
+  const bye = (sig) => () => { console.log(sig + " received, closing."); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); };
+  process.on("SIGTERM", bye("SIGTERM"));
+  process.on("SIGINT", bye("SIGINT"));
 }
 module.exports = { create };

@@ -1,5 +1,8 @@
 /* Integration tests: boots a real server against a real seeded database and
  * exercises the API over HTTP. No mocks. */
+process.env.DRD_ADMIN_PASSWORD = "test-password-123";
+process.env.DRD_SESSION_SECRET = "test-session-secret";
+
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
@@ -46,6 +49,45 @@ function section(t) { console.log("\n\x1b[1m" + t + "\x1b[0m"); }
   eq("no token -> 401", (await api("GET", "/v1/campaigns", null, null)).status, 401);
   eq("bad token -> 401", (await api("GET", "/v1/campaigns", null, "drd_live_wrong")).status, 401);
   eq("valid token -> 200", (await api("GET", "/v1/campaigns")).status, 200);
+
+  // ---- browser session (httpOnly cookie), not a bearer key ----
+  const meAnon = await api("GET", "/v1/auth/me", null, null);
+  eq("auth/me is public", meAnon.status, 200);
+  eq("login is required", meAnon.body.login_required, true);
+  eq("anonymous is not authenticated", meAnon.body.authenticated, false);
+
+  const badLogin = await fetch(BASE + "/v1/auth/login", { method: "POST",
+    headers: { "content-type": "application/json" }, body: JSON.stringify({ password: "wrong" }) });
+  eq("wrong password -> 401", badLogin.status, 401);
+
+  const goodLogin = await fetch(BASE + "/v1/auth/login", { method: "POST",
+    headers: { "content-type": "application/json" }, body: JSON.stringify({ password: "test-password-123" }) });
+  eq("correct password -> 200", goodLogin.status, 200);
+  const setCookie = goodLogin.headers.get("set-cookie") || "";
+  ok("session cookie is issued", /drd_session=/.test(setCookie), setCookie.slice(0, 40));
+  ok("cookie is httpOnly", /HttpOnly/i.test(setCookie), setCookie);
+  ok("cookie is SameSite-scoped", /SameSite=Lax/i.test(setCookie), setCookie);
+  const cookie = setCookie.split(";")[0];
+
+  const viaCookie = await fetch(BASE + "/v1/campaigns", { headers: { cookie } });
+  eq("session cookie authenticates", viaCookie.status, 200);
+  const meAuthed = await fetch(BASE + "/v1/auth/me", { headers: { cookie } }).then((r) => r.json());
+  eq("auth/me reports signed in", meAuthed.authenticated, true);
+
+  const forged = await fetch(BASE + "/v1/campaigns", { headers: { cookie: "drd_session=9999999999999.deadbeef" } });
+  eq("forged cookie rejected", forged.status, 401);
+  const expired = await fetch(BASE + "/v1/campaigns", { headers: { cookie: "drd_session=1.abc" } });
+  eq("expired cookie rejected", expired.status, 401);
+
+  // the client config must never ship a key
+  const cfg = await fetch(BASE + "/config.js").then((r) => r.text());
+  ok("config.js ships no API token", !/drd_live_/.test(cfg) && !/DRD_API_TOKEN/.test(cfg), cfg.slice(0, 90));
+  ok("config.js selects cookie auth", /DRD_AUTH="cookie"/.test(cfg), cfg.slice(0, 90));
+
+  // security headers
+  const hdr = await fetch(BASE + "/v1/health");
+  eq("nosniff header set", hdr.headers.get("x-content-type-options"), "nosniff");
+  eq("clickjacking blocked", hdr.headers.get("x-frame-options"), "DENY");
 
   // -------------------------------------------------------------- search
   section("Search");

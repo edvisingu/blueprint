@@ -205,12 +205,15 @@ window.DRD_WORKSPACE = (function () {
   // token) the workspace is hydrated from the database instead of localStorage,
   // and mutations are written through to the server.
   // ------------------------------------------------------------------
-  const hasApi = () => typeof window !== "undefined" && !!window.DRD_API_TOKEN;
+  const hasApi = () => typeof window !== "undefined" && window.DRD_AUTH === "cookie";
 
+  // The browser authenticates with an httpOnly session cookie set at login.
+  // No API key ever reaches client-side JavaScript.
   async function api(method, path, body) {
     const res = await fetch((window.DRD_API_BASE || "") + path, {
       method,
-      headers: { "content-type": "application/json", authorization: "Bearer " + window.DRD_API_TOKEN },
+      credentials: "same-origin",
+      headers: { "content-type": "application/json" },
       body: body ? JSON.stringify(body) : undefined,
     });
     let json = null;
@@ -285,5 +288,11 @@ window.DRD_WORKSPACE = (function () {
     research: (companyId) => api("POST", "/v1/research", { company_id: companyId }),
   };
 
-  return { load, save, reset, build, hasApi, hydrate, api, push };
+  const auth = {
+    me: () => api("GET", "/v1/auth/me"),
+    login: (password) => api("POST", "/v1/auth/login", { password }),
+    logout: () => api("POST", "/v1/auth/logout"),
+  };
+
+  return { load, save, reset, build, hasApi, hydrate, api, push, auth };
 })();

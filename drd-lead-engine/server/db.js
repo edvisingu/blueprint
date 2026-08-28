@@ -125,12 +125,14 @@ CREATE TABLE IF NOT EXISTS jobs (
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
 `;
 
+const DEFAULT_DB = process.env.DRD_DB_PATH || path.join(__dirname, "drd.db");
+
 function open(file) {
-  const db = new DatabaseSync(file || path.join(__dirname, "drd.db"));
+  const db = new DatabaseSync(file || DEFAULT_DB);
   db.exec(SCHEMA);
   return db;
 }
 
 const id = (p) => p + "_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
-module.exports = { open, id, SCHEMA };
+module.exports = { open, id, SCHEMA, DEFAULT_DB };

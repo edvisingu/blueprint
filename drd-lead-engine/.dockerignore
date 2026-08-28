@@ -1,0 +1,7 @@
+.git
+node_modules
+server/drd.db
+server/drd.db-wal
+server/drd.db-shm
+server/.dev-token
+*.md
