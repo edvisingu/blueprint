@@ -1,5 +1,23 @@
 # Deploying to leads.drdlearn.com
 
+## Fastest path: one command
+
+On the server, as root:
+
+```bash
+git clone -b claude/explee-clone-ks2mdw https://github.com/edvisingu/blueprint.git /tmp/drd \
+  && sudo bash /tmp/drd/drd-lead-engine/deploy/install.sh
+```
+
+It checks Node, installs the app and service, installs cloudflared, walks you
+through Cloudflare authorization, creates the tunnel and DNS route, starts
+everything, then prints your login password and the URL.
+
+Re-run the same script to update; it never overwrites existing secrets.
+To install the app only and wire up the network yourself, add `SKIP_TUNNEL=1`.
+
+Everything below is the same process done manually, plus operations notes.
+
 Two supported paths. Both end with the app on `https://leads.drdlearn.com`,
 password-protected, with the database on local disk.
 
