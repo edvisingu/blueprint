@@ -1,0 +1,6 @@
+# Local database and dev credentials — never commit these
+server/drd.db
+server/drd.db-wal
+server/drd.db-shm
+server/.dev-token
+node_modules/

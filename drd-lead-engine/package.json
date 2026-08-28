@@ -1,0 +1,16 @@
+{
+  "name": "drd-lead-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Dr. D Lead Engineering System — autonomous AI go-to-market platform",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "seed": "NODE_NO_WARNINGS=1 node server/seed.js server/drd.db",
+    "start": "NODE_NO_WARNINGS=1 node server/server.js",
+    "dev": "npm run seed && npm start",
+    "test": "NODE_NO_WARNINGS=1 node server/test.js"
+  },
+  "optionalDependencies": {
+    "@anthropic-ai/sdk": "^0.70.0"
+  }
+}

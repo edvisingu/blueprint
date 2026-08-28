@@ -7,57 +7,101 @@ outreach, classifies the replies, surfaces hot leads and books the meetings.
 Built to the architecture in *Explee: Full Business Breakdown* — original branding, UI, copy
 and implementation, as that document specifies. Not a clone of Explee's source, assets or marks.
 
-Open `index.html` in any browser, or `drd-lead-engine.html` for the single-file build.
-No build step, no dependencies.
+## Run it
+
+Requires Node 22.5+ (uses the built-in `node:sqlite`). No install step needed.
+
+```bash
+npm run dev      # seed the database, then start the API + web client
+# → http://localhost:8787
+npm test         # 89 integration tests against a live server + real database
+```
+
+The page also opens straight from disk (`index.html`) and falls back to a seeded
+in-browser workspace. The header pill tells you which mode you are in:
+**Live backend** (reading and writing the database) or **Local demo**.
+
+## Architecture
+
+```
+Browser client ──HTTP──> API (node:http) ──> SQLite (node:sqlite)
+      │                       │
+      └──── engine.js ────────┘   same scoring / classification code both sides
+                              │
+                              └──> ai.js ──> deterministic  |  Claude API
+```
+
+| File | Role |
+| --- | --- |
+| `server/db.js` | 20-table relational schema (spec §S) |
+| `server/seed.js` | Seeds org, API key, graph, campaigns, conversations, meetings |
+| `server/server.js` | REST API, bearer auth, rate limiting, static hosting |
+| `server/ai.js` | AI orchestration: deterministic default, real Claude when keyed |
+| `server/shared.js` | Loads the browser engine into Node so both runtimes share one implementation |
+| `server/test.js` | Integration suite — real HTTP against a real database, no mocks |
+| `data.js` / `engine.js` | Prospect graph + intelligence (parsing, scoring, research, classification) |
+| `workspace.js` | Client state: hydrates from the API, or seeds locally |
+| `app.js` / `styles.css` | 14 module views; Navy `#0A1628`, Gold `#C9A84C`, Montserrat |
 
 ## Modules
 
 | Spec module | Status |
 | --- | --- |
-| A. Autonomous GTM agent | ✅ Business profile, agent state machine, autopilot, run-cycle |
-| B. Company search | ✅ Natural language → structured criteria, 6-factor fit scoring |
-| C. People search | ✅ Title / seniority / department / geography, email verification status |
-| D. Deep research | ✅ 11-section report: signals, pain, why-now, competitors, angles, sources |
-| E. Lookalike engine | ✅ Company fingerprint → ranked lookalikes with reasons |
-| F. Segments explorer | ✅ Market clusters sized and scored, with coverage + signal rate |
-| G. Campaign manager | ✅ Sequences, budgets, start/pause, per-campaign autopilot |
-| H. AI outbound email | ✅ Trigger-anchored personalization, 4 tones, follow-up steps |
-| I. AI inbox | ✅ Reply classification across 12 intents + confidence + recommended action |
-| J. Hot leads | ✅ Ranked by classifier confidence, with next action and meeting status |
-| K. Analytics | ✅ Outcome metrics (cost/reply, cost/meeting) + narrative AI recommendations |
-| L. Suppression / compliance | ✅ Person + domain suppression, safeguards, audit log |
-| M. Billing / usage | ✅ Credit metering, plan tiers, usage-based rates |
-| N. API | ✅ 17-endpoint surface, keys, webhook events |
-| O. Lead scoring (§U) | ✅ Company fit, buyer fit, intent, timing, data confidence, personalization |
+| A. Autonomous GTM agent | Business profile, ICP hypotheses, agent states, autopilot |
+| B. Company search | Natural language → structured criteria, 6-factor fit scoring |
+| C. People search | Title / seniority / department / geography, verification status |
+| D. Deep research | 11-section report, persisted, credit-metered |
+| E. Lookalike engine | Company fingerprint → ranked lookalikes with reasons |
+| F. Segments explorer | Market clusters sized and scored |
+| G. Campaign manager | Sequences, budgets, start/pause, bulk import, autopilot |
+| H. AI outbound email | Trigger-anchored personalization, 4 tones |
+| I. AI inbox | 12-intent classification, confidence, recommended action |
+| J. Hot leads | Ranked by confidence, with next action and meeting status |
+| K. Analytics | Cost per reply, cost per meeting, narrative recommendations |
+| L. Suppression / compliance | Person + domain, auto-suppression, audit log |
+| M. Billing / usage | Credit metering per send and per research report |
+| N. API | 24 endpoints, bearer auth, rate limits, webhooks |
+| O. Lead scoring (§U) | Six explainable sub-scores summing to 0-100 |
 
-## Architecture
+## What the backend actually enforces
 
-- `data.js` — seeded B2B graph (186 companies, 514 contacts), weighted toward higher-ed,
-  EdTech, corporate L&D and professional services. Deterministic: same dataset every load.
-- `engine.js` — pure intelligence layer. NL parsing, scoring, research synthesis, reply
-  classification, email generation, segments, analytics. No DOM access, independently testable.
-- `workspace.js` — the running-department state: campaigns, conversations, meetings,
-  suppression, usage, agent feed. Persisted to `localStorage`.
-- `app.js` — router, 14 module views, drawers.
-- `styles.css` — "Refined Authority": Navy `#0A1628`, Gold `#C9A84C`, Montserrat only.
+These are behaviours, not display logic, and each has a test:
 
-## Swapping in real infrastructure
+- **Suppression is real.** A suppressed address is skipped on import, skipped on send,
+  and a reply to one returns `409`. Unsubscribe and explicit-negative replies suppress
+  automatically and fire `unsubscribe.received`.
+- **Budgets hold.** Sending stops at the campaign cap; spend never exceeds budget.
+- **Imports are safe.** Dedupe, suppression, unmatched rows and malformed rows are each
+  reported separately rather than silently dropped.
+- **Usage is metered.** Every send and research report writes a `usage_events` row and
+  increments org credits.
+- **Actions are audited.** Every mutation writes to `audit_logs`.
+- **Webhooks respect subscriptions.** A hook only receives the events it subscribed to.
 
-The intelligence layer is provider-agnostic and is the part that matters. To go live:
+## AI providers
 
-1. **Data** — replace `DRD_DATA.companies` / `.people` with a licensed B2B provider response
-   of the same shape. `engine.js` needs no changes.
-2. **AI** — `generateEmail`, `deepResearch` and `classifyReply` are deterministic
-   implementations of the spec's agent contracts. Swap each body for a model call; the
-   inputs and return shapes are already defined.
-3. **Sending** — `campaign.sent` is currently incremented locally. Point it at an email
-   infrastructure provider and honour the suppression list before every send.
-4. **Persistence** — `workspace.js` reads and writes one JSON blob. Replace `load`/`save`
-   with API calls against the relational schema in spec §S.
+`server/ai.js` exposes `classifyReply`, `generateEmail` and `deepResearch`. Routes never
+branch on provider.
 
-## Scope note
+- **Default** — deterministic implementations in `engine.js`. No key, no cost, no network.
+- **Claude** — set `ANTHROPIC_API_KEY` and `npm i @anthropic-ai/sdk`. Uses `claude-opus-5`
+  with adaptive thinking and strict tool use, so structured returns validate against a
+  schema instead of being parsed out of prose. Any failure falls back to deterministic
+  and reports it on `_fallback`.
 
-This is a complete, working front-end product with real logic and persistent state — every
-module is operable end to end. It is not a deployed multi-tenant backend: authentication,
-a relational database, background job queues, real email delivery and live billing are
-integration points (see above), not shipped infrastructure.
+`GET /v1/health` reports which provider is live.
+
+## Still integration points
+
+Honest list of what is wired but not shipped:
+
+- **Email delivery.** `POST /v1/campaigns/:id/send` runs the full pipeline (suppression,
+  budget, generation, conversation + message rows, metering) but does not hand off to an
+  ESP. Add that call at the end of the send loop.
+- **Webhook delivery.** Deliveries are recorded in `webhook_deliveries` with status
+  `recorded`; outbound POST with retries is the remaining step.
+- **Auth.** Single-org bearer API keys, hashed at rest. There is no login flow or
+  multi-tenant role model; `/config.js` hands the browser a dev token locally.
+- **Data.** The graph is seeded (186 companies, 514 contacts) rather than licensed.
+  Replace the `companies` and `contacts` tables from a real provider; nothing above changes.
+- **Jobs.** The `jobs` table records state, but research runs inline rather than on a queue.

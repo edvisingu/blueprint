@@ -30,7 +30,17 @@
   }
   function dateStr(ts) { return new Date(ts).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }); }
   function timeStr(ts) { return new Date(ts).toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); }
-  function save() { WS.save(ws); }
+  function save() { if (!ws.backend) WS.save(ws); }
+
+  // Mirror a local mutation to the server. The UI already updated optimistically,
+  // so a failure surfaces as a toast rather than blocking the interaction.
+  function wt(fn) {
+    if (!ws.backend || !fn) return;
+    try {
+      const p = fn();
+      if (p && p.catch) p.catch(function (e) { toast("Server rejected: " + (e.message || "error")); });
+    } catch (e) { toast("Server error: " + e.message); }
+  }
   function toast(msg) {
     const t = document.createElement("div");
     t.className = "toast"; t.innerHTML = '<span class="d"></span>' + esc(msg);
@@ -290,7 +300,7 @@
   };
   function kv(k, v) { return '<div><div class="k">' + esc(k) + '</div><div class="v">' + esc(v) + "</div></div>"; }
   WIRE.agent = function () {
-    $("#autopilot").onchange = (e) => { ws.autopilot = e.target.checked; save(); audit("autopilot", ws.autopilot ? "enabled" : "disabled"); toast("Autopilot " + (ws.autopilot ? "on" : "off")); go("agent"); };
+    $("#autopilot").onchange = (e) => { ws.autopilot = e.target.checked; save(); wt(function () { return WS.push.autopilot(ws.autopilot); }); audit("autopilot", ws.autopilot ? "enabled" : "disabled"); toast("Autopilot " + (ws.autopilot ? "on" : "off")); go("agent"); };
     const r = $("[data-act='run-agent']"); if (r) r.onclick = runAgentCycle;
     const ra = $("[data-act='reanalyze']"); if (ra) ra.onclick = () => {
       ws.activity.unshift({ state: "ANALYZING", text: "Re-analyzed " + ws.profile.website + " and refreshed the business profile.", at: Date.now() });
@@ -298,7 +308,7 @@
     };
     $$("[data-icp]").forEach((b) => (b.onclick = () => {
       const i = ws.icps.find((x) => x.id === b.dataset.icp);
-      i.approved = !i.approved; save(); audit("icp." + (i.approved ? "approved" : "rejected"), i.name);
+      i.approved = !i.approved; save(); wt(function () { return WS.push.icp(i.id, i.approved); }); audit("icp." + (i.approved ? "approved" : "rejected"), i.name);
       toast(i.name + (i.approved ? " approved" : " rejected")); go("agent");
     }));
     $$("[data-icpsearch]").forEach((b) => (b.onclick = () => {
@@ -552,7 +562,7 @@
       '<div class="inbox"><div class="thread-list">' +
         (list.length ? list.map((c) => {
           const p = E.personById(c.personId), co = E.companyById(c.companyId);
-          const last = c.messages[c.messages.length - 1];
+          const last = c.messages && c.messages.length ? c.messages[c.messages.length - 1] : { text: c.preview || "" };
           return '<div class="thread ' + (act && c.id === act.id ? "on" : "") + '" data-th="' + c.id + '">' +
             '<div class="t1"><span class="nm">' + esc(p.name) + '</span><span class="grow"></span>' +
             '<span class="pill ' + c.intentMeta.color + '">' + esc(c.intent) + "</span></div>" +
@@ -562,6 +572,13 @@
       "</div>" +
       '<div class="thread-view">' + (act ? threadView(act) : '<div class="empty"><b>Select a conversation</b></div>') + "</div></div>";
   };
+  // A conversation's messages load lazily in backend mode, so anything that
+  // needs the latest text falls back to the preview the list endpoint returns.
+  function lastText(c) {
+    if (c.messages && c.messages.length) return c.messages[c.messages.length - 1].text;
+    return c.preview || "";
+  }
+
   function inboxList() {
     let l = ws.conversations.slice().sort((a, b) => b.at - a.at);
     if (state.inbox.filter === "Need Reply") l = l.filter((c) => c.status === "Need Reply");
@@ -569,6 +586,7 @@
     return l;
   }
   function threadView(c) {
+    if (c.messages === null) return '<div class="loading"><div class="spin"></div>Loading conversation\u2026</div>';
     const p = E.personById(c.personId), co = E.companyById(c.companyId);
     const m = c.intentMeta;
     const camp = ws.campaigns.find((x) => x.id === c.campaignId);
@@ -626,21 +644,49 @@
   }
   WIRE.inbox = function () {
     $$("[data-fil]").forEach((b) => (b.onclick = () => { state.inbox.filter = b.dataset.fil; state.inbox.active = null; go("inbox"); }));
-    $$("[data-th]").forEach((d) => (d.onclick = () => { state.inbox.active = d.dataset.th; go("inbox"); }));
+    $$("[data-th]").forEach(function (d) {
+      d.onclick = async function () {
+        state.inbox.active = d.dataset.th;
+        go("inbox");
+        const conv = ws.conversations.find(function (x) { return x.id === d.dataset.th; });
+        if (conv && conv.messages === null) {
+          try {
+            const full = await WS.push.conversation(conv.id);
+            conv.messages = full.data.messages.map(function (m) { return { dir: m.direction, text: m.body, at: m.at }; });
+            conv.intentMeta = Object.assign({}, conv.intentMeta, full.data.intent_meta || {});
+          } catch (e) { conv.messages = []; toast("Could not load conversation"); }
+          if (state.view === "inbox" && state.inbox.active === conv.id) go("inbox");
+        }
+      };
+    });
     const oc = $("[data-open-co]"); if (oc) oc.onclick = () => openCompany(oc.dataset.openCo);
     const send = $("[data-send]");
-    if (send) send.onclick = () => {
+    if (send) send.onclick = async () => {
       const c = ws.conversations.find((x) => x.id === send.dataset.send);
-      c.messages.push({ dir: "out", text: $("#replybox").value, at: Date.now() });
+      const text = $("#replybox").value;
+      if (ws.backend) {
+        try { await WS.push.reply(c.id, text); }
+        catch (e) {
+          toast(e.status === 409 ? "Blocked: this contact is suppressed" : "Server rejected the reply");
+          return;
+        }
+      }
+      if (!c.messages) c.messages = [];
+      c.messages.push({ dir: "out", text: text, at: Date.now() });
       c.status = "Replied"; save(); audit("inbox.reply", c.id);
       toast("Reply sent"); go("inbox");
     };
     const bk = $("[data-book]");
-    if (bk) bk.onclick = () => {
+    if (bk) bk.onclick = async () => {
       const c = ws.conversations.find((x) => x.id === bk.dataset.book);
       if (ws.meetings.some((m) => m.personId === c.personId)) { toast("Meeting already booked"); return; }
       const co = E.companyById(c.companyId);
-      ws.meetings.push({ id: "mtg_" + Date.now().toString(36), personId: c.personId, companyId: c.companyId,
+      let mid = "mtg_" + Date.now().toString(36);
+      if (ws.backend) {
+        try { const r = await WS.push.bookMeeting(c.personId, c.campaignId); mid = r.data.id; }
+        catch (e) { toast(e.status === 409 ? "Meeting already booked" : "Server rejected the booking"); return; }
+      }
+      ws.meetings.push({ id: mid, personId: c.personId, companyId: c.companyId,
         campaignId: c.campaignId, at: Date.now() + 5 * 86400000, duration: 30, status: "Confirmed",
         title: co.name + " — AI readiness intro" });
       const camp = ws.campaigns.find((x) => x.id === c.campaignId); if (camp) camp.meetings++;
@@ -653,11 +699,16 @@
       E.personById(ws.conversations.find((x) => x.id === rg.dataset.regen).personId),
       E.companyById(ws.conversations.find((x) => x.id === rg.dataset.regen).companyId)); };
     const sp = $("[data-supp]");
-    if (sp) sp.onclick = () => {
+    if (sp) sp.onclick = async () => {
       const c = ws.conversations.find((x) => x.id === sp.dataset.supp);
       const p = E.personById(c.personId);
       if (!ws.suppressions.some((s) => s.value === p.email)) {
-        ws.suppressions.push({ id: "sup_" + Date.now().toString(36), type: "Person", value: p.email,
+        let sid = "sup_" + Date.now().toString(36);
+        if (ws.backend) {
+          try { const r = await WS.push.addSuppression(p.email, "Manually suppressed from inbox"); sid = r.id; }
+          catch (e) { if (e.status !== 409) { toast("Server rejected the suppression"); return; } }
+        }
+        ws.suppressions.push({ id: sid, type: "Person", value: p.email,
           reason: "Manually suppressed from inbox", scope: "Global", at: Date.now() });
       }
       c.status = "Closed"; c.hot = false; save(); audit("suppression.added", p.email);
@@ -680,7 +731,7 @@
             '<td><div class="prime">' + esc(p.name) + '</div><div class="sub">' + esc(p.title) + "</div></td>" +
             '<td><div class="prime">' + esc(co.name) + '</div><div class="sub">' + esc(co.industry) + " · " + num(co.size) + " emp</div></td>" +
             '<td><span class="pill good">' + esc(c.intent) + '</span><div class="sub">' + c.intentMeta.confidence + "% conf.</div></td>" +
-            '<td style="max-width:280px">' + esc(c.messages[c.messages.length - 1].text.slice(0, 110)) + "…</td>" +
+            '<td style="max-width:280px">' + esc(lastText(c).slice(0, 110)) + "…</td>" +
             "<td>" + esc(c.intentMeta.action) + "</td>" +
             "<td>" + (m ? '<span class="pill good">' + esc(m.status) + "</span>" : '<span class="pill warn">Not booked</span>') + "</td>" +
             "</tr>";
@@ -809,13 +860,23 @@
       "</div>";
   };
   WIRE.data = function () {
-    $("#addsup").onclick = () => {
+    $("#addsup").onclick = async () => {
       const v = $("#supval").value.trim(); if (!v) { toast("Enter an email or domain"); return; }
-      ws.suppressions.push({ id: "sup_" + Date.now().toString(36), type: v.includes("@") ? "Person" : "Domain",
-        value: v, reason: $("#supreason").value.trim() || "Manual entry", scope: "Global", at: Date.now() });
+      const reason = $("#supreason").value.trim() || "Manual entry";
+      let sid = "sup_" + Date.now().toString(36);
+      if (ws.backend) {
+        try { const r = await WS.push.addSuppression(v, reason); sid = r.id; }
+        catch (e) { toast(e.status === 409 ? "Already on the suppression list" : "Server rejected it"); return; }
+      }
+      ws.suppressions.unshift({ id: sid, type: v.includes("@") ? "Person" : "Domain",
+        value: v, reason: reason, scope: "Global", at: Date.now() });
       save(); audit("suppression.added", v); toast("Added to suppression list"); go("data");
     };
-    $$("[data-unsup]").forEach((b) => (b.onclick = () => {
+    $$("[data-unsup]").forEach((b) => (b.onclick = async () => {
+      if (ws.backend) {
+        try { await WS.push.removeSuppression(b.dataset.unsup); }
+        catch (e) { toast("Server rejected the removal"); return; }
+      }
       ws.suppressions = ws.suppressions.filter((s) => s.id !== b.dataset.unsup);
       save(); audit("suppression.removed", b.dataset.unsup); toast("Removed"); go("data");
     }));
@@ -1128,7 +1189,8 @@
     );
     $("[data-toggle]").onclick = () => {
       c.status = c.status === "Active" ? "Paused" : "Active";
-      save(); audit("campaign." + c.status.toLowerCase(), c.name);
+      save(); wt(function () { return WS.push.campaignStatus(c.id, c.status); });
+      audit("campaign." + c.status.toLowerCase(), c.name);
       toast(c.name + " " + c.status.toLowerCase()); go("campaigns"); openCampaign(c.id);
     };
     $("#campauto").onchange = (e) => { c.autopilot = e.target.checked; save(); toast("Autopilot " + (c.autopilot ? "on" : "off") + " for this campaign"); };
@@ -1141,15 +1203,39 @@
   }
 
   // ============================================================== INIT
-  function init() {
-    renderNav();
-    $("#veil").onclick = closeDrawer;
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+  function paintStatus() {
     const ap = $("#agentstatus");
     ap.className = "agent-pill" + (ws.autopilot ? "" : " off");
-    ap.innerHTML = '<span class="dot"></span>' + (ws.autopilot ? "Agent active · Autopilot on" : "Agent idle · Autopilot off");
+    ap.innerHTML = '<span class="dot"></span>' + (ws.autopilot ? "Agent active \u00b7 Autopilot on" : "Agent idle \u00b7 Autopilot off");
+    const mode = $("#modepill");
+    if (mode) {
+      mode.textContent = ws.backend ? "Live backend" : "Local demo";
+      mode.className = "pill " + (ws.backend ? "good" : "muted");
+      mode.title = ws.backend
+        ? "Reading and writing the API and database."
+        : "Running on seeded data in this browser. Start the server for live mode.";
+    }
+  }
+
+  async function init() {
+    $("#veil").onclick = closeDrawer;
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+
+    // Served by the API? Hydrate from the database. Otherwise stay on the
+    // seeded local workspace so the page still works opened straight off disk.
+    if (WS.hasApi()) {
+      try {
+        $("#page").innerHTML = '<div class="loading"><div class="spin"></div>Connecting to the engine\u2026</div>';
+        ws = await WS.hydrate();
+      } catch (e) {
+        toast("Backend unreachable, using local demo data");
+      }
+    }
+
+    renderNav();
+    paintStatus();
     go("overview");
-    window.__drd = { ws, state, go, E, D };
+    window.__drd = { ws, state, go, E, D, WS };
   }
   document.addEventListener("DOMContentLoaded", init);
 })();

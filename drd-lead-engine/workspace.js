@@ -200,5 +200,90 @@ window.DRD_WORKSPACE = (function () {
   function save(w) { try { localStorage.setItem(KEY, JSON.stringify(w)); } catch (e) {} }
   function reset() { try { localStorage.removeItem(KEY); } catch (e) {} return load(); }
 
-  return { load, save, reset, build };
+  // ------------------------------------------------------------------
+  // Backend mode. When the page is served by the API (config.js supplies a
+  // token) the workspace is hydrated from the database instead of localStorage,
+  // and mutations are written through to the server.
+  // ------------------------------------------------------------------
+  const hasApi = () => typeof window !== "undefined" && !!window.DRD_API_TOKEN;
+
+  async function api(method, path, body) {
+    const res = await fetch((window.DRD_API_BASE || "") + path, {
+      method,
+      headers: { "content-type": "application/json", authorization: "Bearer " + window.DRD_API_TOKEN },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    let json = null;
+    try { json = await res.json(); } catch (e) {}
+    if (!res.ok) {
+      const err = new Error((json && json.error) || ("http_" + res.status));
+      err.status = res.status; err.body = json; throw err;
+    }
+    return json;
+  }
+
+  async function hydrate() {
+    const [projects, icps, campaigns, convos, meetings, sups, usage, audit, hooks] = await Promise.all([
+      api("GET", "/v1/projects"), api("GET", "/v1/icps"), api("GET", "/v1/campaigns"),
+      api("GET", "/v1/conversations"), api("GET", "/v1/meetings"), api("GET", "/v1/suppressions"),
+      api("GET", "/v1/usage"), api("GET", "/v1/audit"), api("GET", "/v1/webhooks"),
+    ]);
+
+    // Lead ids per campaign, so the UI can list and count them.
+    const leadSets = await Promise.all(campaigns.data.map((c) =>
+      api("GET", "/v1/leads?campaign_id=" + encodeURIComponent(c.id)).then((r) => r.data.map((l) => l.contact_id))));
+
+    const project = projects.data[0] || {};
+    const u = usage.data;
+    const seedLocal = build(); // reuse the presentational agent feed
+
+    return {
+      version: 1, backend: true,
+      profile: project.profile || seedLocal.profile,
+      icps: icps.data,
+      campaigns: campaigns.data.map((c, i) => ({
+        id: c.id, name: c.name, icpId: c.icp_id, goal: c.goal, tone: c.tone, status: c.status,
+        autopilot: c.autopilot, budget: c.budget, spend: c.spend, sent: c.sent, replies: c.replies,
+        positive: c.positive, hot: c.hot, meetings: c.meetings, sequence: c.sequence,
+        leadIds: leadSets[i] || [], createdAt: Date.now(),
+      })),
+      conversations: convos.data.map((c) => ({
+        id: c.id, personId: c.contact.id, companyId: c.company.id, campaignId: c.campaign_id,
+        subject: c.subject, status: c.status, intent: c.intent || "Neutral",
+        intentMeta: Object.assign({ confidence: c.confidence || 0, color: "muted", action: "Review manually", rationale: "" }, c.intent_meta || {}),
+        hot: !!c.hot, at: c.last_at, preview: c.preview || "", messages: null, // fetched on open
+      })),
+      meetings: meetings.data.map((m) => ({
+        id: m.id, personId: m.contact.id, companyId: m.company.id, campaignId: m.campaign_id,
+        at: m.at, duration: m.duration, status: m.status, title: m.title,
+      })),
+      suppressions: sups.data.map((s) => ({ id: s.id, type: s.type, value: s.value, reason: s.reason, scope: s.scope, at: s.created_at })),
+      activity: seedLocal.activity,
+      savedSearches: seedLocal.savedSearches,
+      lists: [], research: {},
+      onboarded: true,
+      autopilot: !!u.autopilot,
+      credits: { plan: u.plan, included: u.credits_included, used: u.credits_used, emailRate: 0.031, researchRate: 0.12 },
+      apiKeys: seedLocal.apiKeys,
+      webhooks: hooks.data,
+      audit: audit.data.map((a) => ({ at: a.at, action: a.action, detail: a.detail })),
+    };
+  }
+
+  // Write-through helpers. Each mirrors a local mutation to the server; the UI
+  // already updated optimistically, so a failure surfaces as a toast, not a stall.
+  const push = {
+    icp: (id, approved) => api("PATCH", "/v1/icps/" + id, { approved }),
+    autopilot: (on) => api("PATCH", "/v1/autopilot", { autopilot: on }),
+    campaignStatus: (id, status) => api("POST", "/v1/campaigns/" + id + "/" + (status === "Active" ? "start" : "pause")),
+    createCampaign: (b) => api("POST", "/v1/campaigns", b),
+    addSuppression: (value, reason) => api("POST", "/v1/suppressions", { value, reason }),
+    removeSuppression: (id) => api("DELETE", "/v1/suppressions/" + id),
+    bookMeeting: (contactId, campaignId) => api("POST", "/v1/meetings", { contact_id: contactId, campaign_id: campaignId }),
+    reply: (convId, body) => api("POST", "/v1/conversations/" + convId + "/reply", { body }),
+    conversation: (id) => api("GET", "/v1/conversations/" + id),
+    research: (companyId) => api("POST", "/v1/research", { company_id: companyId }),
+  };
+
+  return { load, save, reset, build, hasApi, hydrate, api, push };
 })();
