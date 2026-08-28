@@ -1,0 +1,42 @@
+# systemd unit — install to /etc/systemd/system/drd-lead-engine.service
+#
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now drd-lead-engine
+#   sudo journalctl -u drd-lead-engine -f
+[Unit]
+Description=Dr. D Lead Engineering System
+After=network-headless.target network.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=drd
+Group=drd
+WorkingDirectory=/opt/drd-lead-engine
+ExecStart=/usr/bin/node server/server.js
+Restart=always
+RestartSec=3
+
+# Listen only on loopback; the reverse proxy terminates TLS in front of it.
+Environment=HOST=127.0.0.1
+Environment=PORT=8080
+Environment=NODE_ENV=production
+Environment=DRD_PUBLIC=1
+Environment=NODE_NO_WARNINGS=1
+Environment=DRD_DB_PATH=/var/lib/drd-lead-engine/drd.db
+
+# Secrets live in a root-owned file, never in this unit.
+EnvironmentFile=/etc/drd-lead-engine.env
+
+# Hardening
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/drd-lead-engine
+ProtectKernelTunables=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+# Cloudflare Tunnel — install to /etc/cloudflared/config.yml
+#
+# Replace <TUNNEL-ID> with the id printed by:  cloudflared tunnel create drd-lead-engine
+#
+# The tunnel dials out to Cloudflare, so the server needs no inbound ports,
+# no static IP and no certificate of its own. Cloudflare terminates TLS.
+
+tunnel: <TUNNEL-ID>
+credentials-file: /root/.cloudflared/<TUNNEL-ID>.json
+
+ingress:
+  - hostname: leads.drdlearn.com
+    service: http://127.0.0.1:8080
+    originRequest:
+      connectTimeout: 30s
+      noTLSVerify: false
+
+  # Anything else that reaches this tunnel gets a 404 rather than the app.
+  - service: http_status:404
