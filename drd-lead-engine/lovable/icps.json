@@ -1,0 +1,77 @@
+[
+  {
+    "id": "icp_1",
+    "name": "Ontario colleges & polytechnics",
+    "fit": 94,
+    "industry": "Higher Education",
+    "country": "Canada",
+    "sizeMin": 200,
+    "approved": true,
+    "why": "Direct match to the AI Literacy Readiness Audit. Provincial AI-policy pressure and an active faculty-development mandate make timing strong.",
+    "buyers": [
+      "VP Academic",
+      "Director of Teaching & Learning",
+      "AVP Innovation"
+    ]
+  },
+  {
+    "id": "icp_2",
+    "name": "EdTech companies selling into institutions",
+    "fit": 88,
+    "industry": "EdTech",
+    "country": null,
+    "sizeMin": 20,
+    "approved": true,
+    "why": "They need institutional credibility and governance language to shorten procurement. Your frameworks are the missing artifact in their sales motion.",
+    "buyers": [
+      "CEO",
+      "Head of Product",
+      "Director of Partnerships"
+    ]
+  },
+  {
+    "id": "icp_3",
+    "name": "Enterprise L&D teams",
+    "fit": 81,
+    "industry": "Corporate Training",
+    "country": null,
+    "sizeMin": 100,
+    "approved": true,
+    "why": "Boards are demanding a workforce AI plan. L&D owns the mandate but lacks a credible curriculum and measurement model.",
+    "buyers": [
+      "Head of L&D",
+      "VP People",
+      "CHRO"
+    ]
+  },
+  {
+    "id": "icp_4",
+    "name": "Professional-services firms",
+    "fit": 74,
+    "industry": "Professional Services",
+    "country": null,
+    "sizeMin": 25,
+    "approved": false,
+    "why": "Partners need AI fluency to defend billable models, but budget ownership is fragmented across practice leads.",
+    "buyers": [
+      "Managing Partner",
+      "Practice Lead",
+      "COO"
+    ]
+  },
+  {
+    "id": "icp_5",
+    "name": "Marketing & creative agencies",
+    "fit": 63,
+    "industry": "Agency",
+    "country": null,
+    "sizeMin": 10,
+    "approved": false,
+    "why": "High interest in AI upskilling but smaller budgets and faster, less formal buying cycles than the core institutional motion.",
+    "buyers": [
+      "Founder",
+      "Managing Director",
+      "Head of Growth"
+    ]
+  }
+]

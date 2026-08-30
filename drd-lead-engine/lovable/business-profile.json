@@ -1,0 +1,34 @@
+{
+  "website": "edvisingu.ca",
+  "company": "EdVisingU",
+  "analyzed": true,
+  "industry": "Education Consulting & AI Literacy",
+  "product": "AI literacy readiness audits, institutional alignment briefs, and workforce AI training",
+  "targetCustomer": "Post-secondary institutions, EdTech companies, and professional-services firms",
+  "likelyBuyer": "VP Academic, Director of Teaching & Learning, Head of L&D, Managing Partner",
+  "geography": "Canada (Ontario focus), United States, United Kingdom",
+  "differentiators": [
+    "Practitioner-led, not vendor-led",
+    "Institution-ready governance frameworks",
+    "Faculty adoption playbooks"
+  ],
+  "painPoints": [
+    "No institutional AI policy",
+    "Faculty AI-skills gap",
+    "Academic integrity pressure",
+    "Board asking for an AI plan"
+  ],
+  "useCases": [
+    "AI readiness audit",
+    "Faculty AI training cohort",
+    "Institutional AI policy design",
+    "Program modernization"
+  ],
+  "keywords": [
+    "AI literacy",
+    "academic integrity",
+    "faculty development",
+    "institutional readiness"
+  ],
+  "pricingSignal": "$25K–$500K engagements"
+}

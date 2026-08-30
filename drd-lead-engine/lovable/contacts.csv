@@ -1,0 +1,515 @@
+id,company_id,name,title,seniority,department,email,email_status,verified,phone,linkedin,city,country
+pe_1,co_1,Camille Iyer,Director of Business Development,C-Suite,Sales,camille.iyer@vantagepeak.io,Catch-all,false,,in/camille-iyer,Detroit,United States
+pe_2,co_1,Rosa Andersson,Chief Operating Officer,C-Suite,Executive,rosa.andersson@vantagepeak.io,Catch-all,false,,in/rosa-andersson,Detroit,United States
+pe_3,co_2,Priya Santos,Practice Lead,Manager,Executive,priya.santos@summitbridge.com,Verified,true,+1 535 403 7503,in/priya-santos,Oshawa,Canada
+pe_4,co_2,Salma Tremblay,Chief Operating Officer,C-Suite,Executive,salma.tremblay@summitbridge.com,Verified,true,,in/salma-tremblay,Oshawa,Canada
+pe_5,co_3,Mia Moreno,CTO,C-Suite,Product & Eng,mia.moreno@maplegate.co,Verified,true,,in/mia-moreno,Dublin,Ireland
+pe_6,co_3,Freja Laurent,Director of Demand Gen,C-Suite,Sales,freja.laurent@maplegate.co,Verified,true,+1 706 825 1029,in/freja-laurent,Dublin,Ireland
+pe_7,co_3,Freja Farouk,CEO,C-Suite,Executive,freja.farouk@maplegate.co,Verified,true,+1 577 998 4833,in/freja-farouk,Dublin,Ireland
+pe_8,co_4,Hannah Lim,CEO,C-Suite,Executive,hannah.lim@driftpeak.org,Verified,true,+1 947 928 8611,in/hannah-lim,Pickering,Canada
+pe_9,co_4,Aisha Iyer,Director of Partnerships,C-Suite,Sales,aisha.iyer@driftpeak.org,Verified,true,,in/aisha-iyer,Pickering,Canada
+pe_10,co_5,Ingrid Clarke,CEO,C-Suite,Executive,ingrid.clarke@compassloop.org,Verified,true,+1 289 206 6570,in/ingrid-clarke,Vancouver,Canada
+pe_11,co_5,Wei Stein,Chief Medical Officer,C-Suite,Executive,wei.stein@compassloop.org,Catch-all,false,,in/wei-stein,Vancouver,Canada
+pe_12,co_5,Theo Aziz,VP Sales,VP,Sales,theo.aziz@compassloop.org,Verified,true,,in/theo-aziz,Vancouver,Canada
+pe_13,co_6,Kevin Price,VP People,VP,People & L&D,kevin.price@crestrise.co,Catch-all,false,,in/kevin-price,London,Canada
+pe_14,co_6,David Farouk,Director of Talent Development,C-Suite,Product & Eng,david.farouk@crestrise.co,Verified,true,+1 515 772 9455,in/david-farouk,London,Canada
+pe_15,co_6,Ruby Lindqvist,CHRO,C-Suite,People & L&D,ruby.lindqvist@crestrise.co,Verified,true,,in/ruby-lindqvist,London,Canada
+pe_16,co_7,Olivia Marchetti,Director of Programs,C-Suite,Product & Eng,olivia.marchetti@driftpoint.ca,Verified,true,+1 270 526 8404,in/olivia-marchetti,Ottawa,Canada
+pe_17,co_7,Liam Walker,Executive Director,C-Suite,Product & Eng,liam.walker@driftpoint.ca,Verified,true,,in/liam-walker,Ottawa,Canada
+pe_18,co_7,Chris Tremblay,Development Director,C-Suite,Product & Eng,chris.tremblay@driftpoint.ca,Unverified,false,,in/chris-tremblay,Ottawa,Canada
+pe_19,co_8,Leah Errington,Director of Talent Development,C-Suite,Product & Eng,leah.errington@cedarwave.ca,Verified,true,,in/leah-errington,Detroit,United States
+pe_20,co_8,Malik Devlin,CHRO,C-Suite,People & L&D,malik.devlin@cedarwave.ca,Verified,true,+1 336 793 7761,in/malik-devlin,Detroit,United States
+pe_21,co_8,Emily Price,VP People,VP,People & L&D,emily.price@cedarwave.ca,Verified,true,+1 710 869 3734,in/emily-price,Detroit,United States
+pe_22,co_9,Marcus Ward,Director of Talent Development,C-Suite,Product & Eng,marcus.ward@basinshift.ca,Catch-all,false,,in/marcus-ward,Minneapolis,United States
+pe_23,co_9,Tunde Walker,VP People,VP,People & L&D,tunde.walker@basinshift.ca,Verified,true,+1 472 427 2637,in/tunde-walker,Minneapolis,United States
+pe_24,co_9,Camille Lim,Head of L&D,Head,People & L&D,camille.lim@basinshift.ca,Verified,true,+1 595 672 7924,in/camille-lim,Minneapolis,United States
+pe_25,co_10,Ivan Okonkwo,Director of Teaching & Learning,C-Suite,Product & Eng,ivan.okonkwo@oakmerecollege.edu,Verified,true,,in/ivan-okonkwo,Edmonton,Canada
+pe_26,co_10,Chris Rivera,AVP Innovation,VP,Executive,chris.rivera@oakmerecollege.edu,Verified,true,,in/chris-rivera,Edmonton,Canada
+pe_27,co_10,Liam Cole,VP Academic,VP,Academic,liam.cole@oakmerecollege.edu,Verified,true,,in/liam-cole,Edmonton,Canada
+pe_28,co_11,Wei Devlin,Chief Operating Officer,C-Suite,Executive,wei.devlin@anchorcore.co,Verified,true,,in/wei-devlin,New York,United States
+pe_29,co_11,Ingrid Zhao,Managing Partner,C-Suite,Executive,ingrid.zhao@anchorcore.co,Verified,true,,in/ingrid-zhao,New York,United States
+pe_30,co_12,Aisha Okonkwo,CEO,C-Suite,Executive,aisha.okonkwo@quarrymark.io,Verified,true,,in/aisha-okonkwo,Manchester,United Kingdom
+pe_31,co_13,Ella Blake,Head of Product,Head,Product & Eng,ella.blake@aldercore.com,Verified,true,,in/ella-blake,Ottawa,Canada
+pe_32,co_13,David Duarte,Director of Partnerships,C-Suite,Sales,david.duarte@aldercore.com,Catch-all,false,,in/david-duarte,Ottawa,Canada
+pe_33,co_13,Aisha Moreno,VP Sales,VP,Sales,aisha.moreno@aldercore.com,Verified,true,+1 754 252 3486,in/aisha-moreno,Ottawa,Canada
+pe_34,co_14,Olivia Kim,Director of Talent Development,C-Suite,Product & Eng,olivia.kim@kestrelgate.org,Verified,true,,in/olivia-kim,London,Canada
+pe_35,co_14,Ingrid Wilson,Head of L&D,Head,People & L&D,ingrid.wilson@kestrelgate.org,Verified,true,,in/ingrid-wilson,London,Canada
+pe_36,co_14,Erik Moreno,VP People,VP,People & L&D,erik.moreno@kestrelgate.org,Verified,true,+1 722 494 1394,in/erik-moreno,London,Canada
+pe_37,co_15,Amir Nguyen,Director of Demand Gen,C-Suite,Sales,amir.nguyen@havengrove.com,Verified,true,+1 492 360 8059,in/amir-nguyen,London,Canada
+pe_38,co_16,Tunde Walker,CHRO,C-Suite,People & L&D,tunde.walker@northlabs.ca,Catch-all,false,,in/tunde-walker,New York,United States
+pe_39,co_16,Tunde Vogt,VP People,VP,People & L&D,tunde.vogt@northlabs.ca,Verified,true,+1 929 248 1393,in/tunde-vogt,New York,United States
+pe_40,co_17,Ella Shah,VP Sales,VP,Sales,ella.shah@lumenlabs.org,Verified,true,+1 516 295 9232,in/ella-shah,San Francisco,United States
+pe_41,co_17,Laura Iyer,CEO,C-Suite,Executive,laura.iyer@lumenlabs.org,Verified,true,,in/laura-iyer,San Francisco,United States
+pe_42,co_17,Leah Halvorsen,CTO,C-Suite,Product & Eng,leah.halvorsen@lumenlabs.org,Verified,true,,in/leah-halvorsen,San Francisco,United States
+pe_43,co_18,Renee Vogt,CEO,C-Suite,Executive,renee.vogt@anchorpath.org,Verified,true,,in/renee-vogt,Hamilton,Canada
+pe_44,co_18,Hollie Okafor,VP Sales,VP,Sales,hollie.okafor@anchorpath.org,Verified,true,,in/hollie-okafor,Hamilton,Canada
+pe_45,co_19,Petra Lim,Managing Partner,C-Suite,Executive,petra.lim@ironpath.ca,Verified,true,+1 434 708 7755,in/petra-lim,Oshawa,Canada
+pe_46,co_19,Leah Shah,Practice Lead,Manager,Executive,leah.shah@ironpath.ca,Verified,true,+1 859 915 7613,in/leah-shah,Oshawa,Canada
+pe_47,co_20,Rosa Duarte,CEO,C-Suite,Executive,rosa.duarte@havencore.org,Verified,true,+1 516 263 5608,in/rosa-duarte,Dublin,Ireland
+pe_48,co_20,Leah Reyes,Director of Partnerships,C-Suite,Sales,leah.reyes@havencore.org,Catch-all,false,,in/leah-reyes,Dublin,Ireland
+pe_49,co_20,Jeroen Mbeki,VP Sales,VP,Sales,jeroen.mbeki@havencore.org,Verified,true,,in/jeroen-mbeki,Dublin,Ireland
+pe_50,co_21,Chinwe Halvorsen,Director of Talent Development,C-Suite,Product & Eng,chinwe.halvorsen@fernworks.io,Verified,true,,in/chinwe-halvorsen,Leeds,United Kingdom
+pe_51,co_21,Freja Osei,CHRO,C-Suite,People & L&D,freja.osei@fernworks.io,Verified,true,+1 685 617 6563,in/freja-osei,Leeds,United Kingdom
+pe_52,co_21,Dmitri Rivera,VP People,VP,People & L&D,dmitri.rivera@fernworks.io,Verified,true,,in/dmitri-rivera,Leeds,United Kingdom
+pe_53,co_21,Chris Andersson,Head of L&D,Head,People & L&D,chris.andersson@fernworks.io,Verified,true,,in/chris-andersson,Leeds,United Kingdom
+pe_54,co_22,Victor Ward,AVP Innovation,VP,Executive,victor.ward@fernbrookuniversit.com,Verified,true,+1 921 263 9282,in/victor-ward,London,Canada
+pe_55,co_22,Lena Vogt,Registrar,Director,Academic,lena.vogt@fernbrookuniversit.com,Verified,true,+1 440 950 7394,in/lena-vogt,London,Canada
+pe_56,co_22,Omar Kowalski,Director of Continuing Education,C-Suite,Product & Eng,omar.kowalski@fernbrookuniversit.com,Verified,true,+1 306 986 3963,in/omar-kowalski,London,Canada
+pe_57,co_23,Colin Blake,Head of Product,Head,Product & Eng,colin.blake@vantagepoint.org,Verified,true,,in/colin-blake,Waterloo,Canada
+pe_58,co_23,Klaus Fraser,Director of Partnerships,C-Suite,Sales,klaus.fraser@vantagepoint.org,Verified,true,,in/klaus-fraser,Waterloo,Canada
+pe_59,co_23,Jordan Lindqvist,VP Sales,VP,Sales,jordan.lindqvist@vantagepoint.org,Verified,true,+1 605 748 5836,in/jordan-lindqvist,Waterloo,Canada
+pe_60,co_24,Petra Grant,Director of Partnerships,C-Suite,Sales,petra.grant@granitespan.io,Verified,true,,in/petra-grant,Berlin,Germany
+pe_61,co_24,Klaus Whitfield,VP Sales,VP,Sales,klaus.whitfield@granitespan.io,Verified,true,,in/klaus-whitfield,Berlin,Germany
+pe_62,co_25,Erik Nguyen,Managing Director,C-Suite,Product & Eng,erik.nguyen@crestbridge.com,Verified,true,+1 666 534 1483,in/erik-nguyen,Miami,United States
+pe_63,co_25,Jeroen Bello,New Business Director,C-Suite,Product & Eng,jeroen.bello@crestbridge.com,Catch-all,false,,in/jeroen-bello,Miami,United States
+pe_64,co_25,Tunde Haddad,Head of Growth,Head,Sales,tunde.haddad@crestbridge.com,Unverified,false,,in/tunde-haddad,Miami,United States
+pe_65,co_26,Klaus Lim,Head of Partnerships,Head,Sales,klaus.lim@cardinalworks.io,Verified,true,+1 929 392 7591,in/klaus-lim,Hamilton,Canada
+pe_66,co_26,Marc Bello,CFO,C-Suite,Executive,marc.bello@cardinalworks.io,Verified,true,,in/marc-bello,Hamilton,Canada
+pe_67,co_27,Hannah Patel,Director of Talent Development,C-Suite,Product & Eng,hannah.patel@tamarackforge.ca,Verified,true,+1 967 644 5743,in/hannah-patel,Boston,United States
+pe_68,co_27,Devon Walker,VP People,VP,People & L&D,devon.walker@tamarackforge.ca,Verified,true,+1 950 881 7675,in/devon-walker,Boston,United States
+pe_69,co_27,Freja Price,CHRO,C-Suite,People & L&D,freja.price@tamarackforge.ca,Unverified,false,,in/freja-price,Boston,United States
+pe_70,co_28,Gabriel Patel,CISO,C-Suite,Executive,gabriel.patel@northscope.org,Verified,true,,in/gabriel-patel,Vancouver,Canada
+pe_71,co_28,Rosa Clarke,VP Sales,VP,Sales,rosa.clarke@northscope.org,Verified,true,,in/rosa-clarke,Vancouver,Canada
+pe_72,co_28,Hollie Marchetti,Head of Security Engineering,Head,Product & Eng,hollie.marchetti@northscope.org,Catch-all,false,,in/hollie-marchetti,Vancouver,Canada
+pe_73,co_29,David Kowalski,Development Director,C-Suite,Product & Eng,david.kowalski@cedarshift.io,Catch-all,false,,in/david-kowalski,Pickering,Canada
+pe_74,co_30,Farah Moreno,Head of Partnerships,Head,Sales,farah.moreno@emberscope.com,Catch-all,false,,in/farah-moreno,London,Canada
+pe_75,co_30,Jordan Nolan,CEO,C-Suite,Executive,jordan.nolan@emberscope.com,Catch-all,false,,in/jordan-nolan,London,Canada
+pe_76,co_30,Wei Roberts,VP Revenue,VP,Sales,wei.roberts@emberscope.com,Catch-all,false,,in/wei-roberts,London,Canada
+pe_77,co_31,Rachel Wilson,Director of Teaching & Learning,C-Suite,Product & Eng,rachel.wilson@stonebridgepolytec.com,Verified,true,,in/rachel-wilson,Boston,United States
+pe_78,co_31,Sam Rahman,Director of Continuing Education,C-Suite,Product & Eng,sam.rahman@stonebridgepolytec.com,Verified,true,,in/sam-rahman,Boston,United States
+pe_79,co_31,Devon Clarke,VP Academic,VP,Academic,devon.clarke@stonebridgepolytec.com,Unverified,false,,in/devon-clarke,Boston,United States
+pe_80,co_31,Tanya Okafor,Dean of Students,Director,Academic,tanya.okafor@stonebridgepolytec.com,Verified,true,,in/tanya-okafor,Boston,United States
+pe_81,co_32,Leah Nolan,Director of Partnerships,C-Suite,Sales,leah.nolan@riverwave.com,Verified,true,+1 492 234 4599,in/leah-nolan,Leeds,United Kingdom
+pe_82,co_32,Sam Santos,VP Sales,VP,Sales,sam.santos@riverwave.com,Verified,true,+1 608 675 8524,in/sam-santos,Leeds,United Kingdom
+pe_83,co_32,Kevin Roberts,Chief Learning Officer,C-Suite,People & L&D,kevin.roberts@riverwave.com,Verified,true,+1 409 370 8512,in/kevin-roberts,Leeds,United Kingdom
+pe_84,co_32,Tunde Okafor,Head of Product,Head,Product & Eng,tunde.okafor@riverwave.com,Catch-all,false,,in/tunde-okafor,Leeds,United Kingdom
+pe_85,co_33,Noah Lindqvist,Director of Talent Development,C-Suite,Product & Eng,noah.lindqvist@anchorfield.org,Verified,true,,in/noah-lindqvist,Philadelphia,United States
+pe_86,co_33,Sam Petrov,Head of L&D,Head,People & L&D,sam.petrov@anchorfield.org,Verified,true,,in/sam-petrov,Philadelphia,United States
+pe_87,co_34,Bianca Walker,Practice Lead,Manager,Executive,bianca.walker@onyxgrove.io,Catch-all,false,,in/bianca-walker,London,Canada
+pe_88,co_34,Ahmed Whitfield,Managing Partner,C-Suite,Executive,ahmed.whitfield@onyxgrove.io,Verified,true,+1 662 625 8818,in/ahmed-whitfield,London,Canada
+pe_89,co_35,Tom Shah,New Business Director,C-Suite,Product & Eng,tom.shah@harbourshift.com,Verified,true,+1 301 827 3336,in/tom-shah,Boston,United States
+pe_90,co_35,Sam Reyes,Managing Director,C-Suite,Product & Eng,sam.reyes@harbourshift.com,Verified,true,,in/sam-reyes,Boston,United States
+pe_91,co_35,Bianca Patel,Head of Growth,Head,Sales,bianca.patel@harbourshift.com,Verified,true,,in/bianca-patel,Boston,United States
+pe_92,co_36,Kevin Farouk,Dean of Students,Director,Academic,kevin.farouk@oakmerecollegeofap.org,Catch-all,false,,in/kevin-farouk,San Francisco,United States
+pe_93,co_36,Alex Miller,Director of Teaching & Learning,C-Suite,Product & Eng,alex.miller@oakmerecollegeofap.org,Catch-all,false,,in/alex-miller,San Francisco,United States
+pe_94,co_36,Keiko Mendes,Registrar,Director,Academic,keiko.mendes@oakmerecollegeofap.org,Verified,true,+1 516 710 1928,in/keiko-mendes,San Francisco,United States
+pe_95,co_36,Farah Grant,AVP Innovation,VP,Executive,farah.grant@oakmerecollegeofap.org,Verified,true,,in/farah-grant,San Francisco,United States
+pe_96,co_37,Chris Duarte,VP Sales,VP,Sales,chris.duarte@mapleforge.ca,Verified,true,+1 297 629 1685,in/chris-duarte,Vancouver,Canada
+pe_97,co_37,Rachel Grant,Director of Partnerships,C-Suite,Sales,rachel.grant@mapleforge.ca,Verified,true,,in/rachel-grant,Vancouver,Canada
+pe_98,co_37,Carlos Iyer,CEO,C-Suite,Executive,carlos.iyer@mapleforge.ca,Verified,true,+1 810 458 4692,in/carlos-iyer,Vancouver,Canada
+pe_99,co_37,Kevin Okonkwo,Chief Learning Officer,C-Suite,People & L&D,kevin.okonkwo@mapleforge.ca,Verified,true,,in/kevin-okonkwo,Vancouver,Canada
+pe_100,co_38,Raj Whitfield,Director of Programs,C-Suite,Product & Eng,raj.whitfield@cardinalbridge.co,Verified,true,+1 449 860 6695,in/raj-whitfield,New York,United States
+pe_101,co_38,Simone Kowalski,Development Director,C-Suite,Product & Eng,simone.kowalski@cardinalbridge.co,Verified,true,,in/simone-kowalski,New York,United States
+pe_102,co_39,Bianca Miller,AVP Innovation,VP,Executive,bianca.miller@northgateuniversit.edu,Verified,true,,in/bianca-miller,Boston,United States
+pe_103,co_39,Theo Holm,Director of Continuing Education,C-Suite,Product & Eng,theo.holm@northgateuniversit.edu,Verified,true,+1 498 303 6769,in/theo-holm,Boston,United States
+pe_104,co_39,Malik Duarte,VP Academic,VP,Academic,malik.duarte@northgateuniversit.edu,Verified,true,,in/malik-duarte,Boston,United States
+pe_105,co_39,Tom Obi,Director of Teaching & Learning,C-Suite,Product & Eng,tom.obi@northgateuniversit.edu,Verified,true,+1 288 445 1890,in/tom-obi,Boston,United States
+pe_106,co_40,Ella Ali,Director of Talent Development,C-Suite,Product & Eng,ella.ali@meridiangate.com,Verified,true,+1 925 732 7258,in/ella-ali,Manchester,United Kingdom
+pe_107,co_40,Bianca Hall,CHRO,C-Suite,People & L&D,bianca.hall@meridiangate.com,Verified,true,,in/bianca-hall,Manchester,United Kingdom
+pe_108,co_40,Grace Rossi,VP People,VP,People & L&D,grace.rossi@meridiangate.com,Verified,true,,in/grace-rossi,Manchester,United Kingdom
+pe_109,co_41,Erik Bello,Head of L&D,Head,People & L&D,erik.bello@willowspan.io,Verified,true,,in/erik-bello,Philadelphia,United States
+pe_110,co_41,Theo Laurent,CHRO,C-Suite,People & L&D,theo.laurent@willowspan.io,Verified,true,,in/theo-laurent,Philadelphia,United States
+pe_111,co_41,Ingrid Marchetti,VP People,VP,People & L&D,ingrid.marchetti@willowspan.io,Verified,true,+1 941 662 1580,in/ingrid-marchetti,Philadelphia,United States
+pe_112,co_41,Malik Haddad,Director of Talent Development,C-Suite,Product & Eng,malik.haddad@willowspan.io,Catch-all,false,,in/malik-haddad,Philadelphia,United States
+pe_113,co_42,Sofia Duarte,Chief Compliance Officer,C-Suite,Executive,sofia.duarte@ridgebridge.io,Verified,true,,in/sofia-duarte,London,Canada
+pe_114,co_42,Hollie Halvorsen,CFO,C-Suite,Executive,hollie.halvorsen@ridgebridge.io,Verified,true,,in/hollie-halvorsen,London,Canada
+pe_115,co_42,Hannah Okonkwo,CEO,C-Suite,Executive,hannah.okonkwo@ridgebridge.io,Unverified,false,,in/hannah-okonkwo,London,Canada
+pe_116,co_43,Andre Osei,Dean of Students,Director,Academic,andre.osei@brookvaleinstitute.com,Verified,true,,in/andre-osei,Chicago,United States
+pe_117,co_43,Marc Laurent,AVP Innovation,VP,Executive,marc.laurent@brookvaleinstitute.com,Catch-all,false,,in/marc-laurent,Chicago,United States
+pe_118,co_43,Lucia Shah,Director of Teaching & Learning,C-Suite,Product & Eng,lucia.shah@brookvaleinstitute.com,Catch-all,false,,in/lucia-shah,Chicago,United States
+pe_119,co_43,Sam Aziz,Registrar,Director,Academic,sam.aziz@brookvaleinstitute.com,Verified,true,+1 693 402 2696,in/sam-aziz,Chicago,United States
+pe_120,co_44,Malik Hall,AVP Innovation,VP,Executive,malik.hall@kingswayuniversity.edu,Verified,true,,in/malik-hall,Boston,United States
+pe_121,co_44,Mia Andersson,Dean of Students,Director,Academic,mia.andersson@kingswayuniversity.edu,Catch-all,false,,in/mia-andersson,Boston,United States
+pe_122,co_44,Ingrid Lim,Registrar,Director,Academic,ingrid.lim@kingswayuniversity.edu,Verified,true,,in/ingrid-lim,Boston,United States
+pe_123,co_45,Ruby Mbeki,AVP Innovation,VP,Executive,ruby.mbeki@kingswayinstitute.ca,Verified,true,+1 382 615 2156,in/ruby-mbeki,London,Canada
+pe_124,co_45,Alex Ali,VP Academic,VP,Academic,alex.ali@kingswayinstitute.ca,Verified,true,+1 721 476 4997,in/alex-ali,London,Canada
+pe_125,co_45,Carlos Bello,Director of Teaching & Learning,C-Suite,Product & Eng,carlos.bello@kingswayinstitute.ca,Verified,true,,in/carlos-bello,London,Canada
+pe_126,co_46,Camille Kim,CEO,C-Suite,Executive,camille.kim@driftspan.io,Unverified,false,,in/camille-kim,Toronto,Canada
+pe_127,co_46,Raj Andersson,Chief Learning Officer,C-Suite,People & L&D,raj.andersson@driftspan.io,Verified,true,+1 278 344 6378,in/raj-andersson,Toronto,Canada
+pe_128,co_46,Priya Rivera,Head of Product,Head,Product & Eng,priya.rivera@driftspan.io,Verified,true,,in/priya-rivera,Toronto,Canada
+pe_129,co_47,Yusuf Santos,VP People,VP,People & L&D,yusuf.santos@pinnacleforge.ca,Verified,true,,in/yusuf-santos,Dublin,Ireland
+pe_130,co_47,Amir Kim,CHRO,C-Suite,People & L&D,amir.kim@pinnacleforge.ca,Verified,true,+1 429 564 6515,in/amir-kim,Dublin,Ireland
+pe_131,co_47,Carlos Holm,Director of Talent Development,C-Suite,Product & Eng,carlos.holm@pinnacleforge.ca,Verified,true,,in/carlos-holm,Dublin,Ireland
+pe_132,co_47,Nadia Devlin,Head of L&D,Head,People & L&D,nadia.devlin@pinnacleforge.ca,Catch-all,false,,in/nadia-devlin,Dublin,Ireland
+pe_133,co_48,Ivan Grant,CTO,C-Suite,Product & Eng,ivan.grant@fernlabs.co,Verified,true,,in/ivan-grant,New York,United States
+pe_134,co_49,Chinwe Walker,Director of Teaching & Learning,C-Suite,Product & Eng,chinwe.walker@westbournecollege.io,Verified,true,,in/chinwe-walker,Detroit,United States
+pe_135,co_49,Raj Petrov,Director of Continuing Education,C-Suite,Product & Eng,raj.petrov@westbournecollege.io,Catch-all,false,,in/raj-petrov,Detroit,United States
+pe_136,co_49,Ahmed Rivera,AVP Innovation,VP,Executive,ahmed.rivera@westbournecollege.io,Verified,true,,in/ahmed-rivera,Detroit,United States
+pe_137,co_49,Devon Roberts,VP Academic,VP,Academic,devon.roberts@westbournecollege.io,Verified,true,+1 660 517 8126,in/devon-roberts,Detroit,United States
+pe_138,co_50,Chinwe Hall,Practice Lead,Manager,Executive,chinwe.hall@beacongate.edu,Verified,true,,in/chinwe-hall,Glasgow,United Kingdom
+pe_139,co_50,Mia Wilson,Managing Partner,C-Suite,Executive,mia.wilson@beacongate.edu,Verified,true,+1 715 791 9161,in/mia-wilson,Glasgow,United Kingdom
+pe_140,co_51,Ruby Haddad,CISO,C-Suite,Executive,ruby.haddad@tamarackscope.ca,Verified,true,+1 616 569 8915,in/ruby-haddad,Boston,United States
+pe_141,co_51,Raj Okafor,Head of Security Engineering,Head,Product & Eng,raj.okafor@tamarackscope.ca,Verified,true,+1 629 825 9517,in/raj-okafor,Boston,United States
+pe_142,co_51,Maya Tremblay,VP Sales,VP,Sales,maya.tremblay@tamarackscope.ca,Verified,true,,in/maya-tremblay,Boston,United States
+pe_143,co_52,Sean Reyes,AVP Innovation,VP,Executive,sean.reyes@bellhaveninstitute.ca,Verified,true,+1 365 894 3014,in/sean-reyes,Los Angeles,United States
+pe_144,co_52,Ananya Patel,Dean of Students,Director,Academic,ananya.patel@bellhaveninstitute.ca,Verified,true,+1 475 362 7734,in/ananya-patel,Los Angeles,United States
+pe_145,co_52,Ahmed Iyer,Registrar,Director,Academic,ahmed.iyer@bellhaveninstitute.ca,Catch-all,false,,in/ahmed-iyer,Los Angeles,United States
+pe_146,co_52,Laura Chen,Director of Continuing Education,C-Suite,Product & Eng,laura.chen@bellhaveninstitute.ca,Verified,true,+1 883 914 4735,in/laura-chen,Los Angeles,United States
+pe_147,co_53,Keiko Santos,Chief Learning Officer,C-Suite,People & L&D,keiko.santos@summitgate.io,Verified,true,,in/keiko-santos,Pickering,Canada
+pe_148,co_53,Sam Vogt,Head of Product,Head,Product & Eng,sam.vogt@summitgate.io,Verified,true,,in/sam-vogt,Pickering,Canada
+pe_149,co_53,Theo Stein,VP Sales,VP,Sales,theo.stein@summitgate.io,Unverified,false,,in/theo-stein,Pickering,Canada
+pe_150,co_54,Hannah Brooks,Director of Partnerships,C-Suite,Sales,hannah.brooks@basinpath.ca,Catch-all,false,,in/hannah-brooks,Rotterdam,Netherlands
+pe_151,co_54,David Laurent,VP Sales,VP,Sales,david.laurent@basinpath.ca,Unverified,false,,in/david-laurent,Rotterdam,Netherlands
+pe_152,co_54,Dmitri Cole,Chief Learning Officer,C-Suite,People & L&D,dmitri.cole@basinpath.ca,Verified,true,,in/dmitri-cole,Rotterdam,Netherlands
+pe_153,co_54,Carlos Cole,CEO,C-Suite,Executive,carlos.cole@basinpath.ca,Verified,true,+1 785 682 8261,in/carlos-cole,Rotterdam,Netherlands
+pe_154,co_55,Freja Clarke,Head of Growth,Head,Sales,freja.clarke@elmloop.io,Verified,true,+1 278 909 9325,in/freja-clarke,Los Angeles,United States
+pe_155,co_55,Tom Duarte,CTO,C-Suite,Product & Eng,tom.duarte@elmloop.io,Unverified,false,,in/tom-duarte,Los Angeles,United States
+pe_156,co_55,Chinwe Grant,CEO,C-Suite,Executive,chinwe.grant@elmloop.io,Verified,true,,in/chinwe-grant,Los Angeles,United States
+pe_157,co_56,Aisha Murphy,CHRO,C-Suite,People & L&D,aisha.murphy@driftscope.edu,Verified,true,,in/aisha-murphy,Oshawa,Canada
+pe_158,co_56,Noah Sorensen,VP People,VP,People & L&D,noah.sorensen@driftscope.edu,Verified,true,,in/noah-sorensen,Oshawa,Canada
+pe_159,co_57,Ruby Moreno,Director of Partnerships,C-Suite,Sales,ruby.moreno@ridgepath.co,Verified,true,,in/ruby-moreno,Atlanta,United States
+pe_160,co_57,Jeroen Brown,CEO,C-Suite,Executive,jeroen.brown@ridgepath.co,Verified,true,,in/jeroen-brown,Atlanta,United States
+pe_161,co_57,Olivia Osei,Head of Product,Head,Product & Eng,olivia.osei@ridgepath.co,Unverified,false,,in/olivia-osei,Atlanta,United States
+pe_162,co_58,Ahmed Moreno,Registrar,Director,Academic,ahmed.moreno@bellhavenuniversit.co,Verified,true,+1 457 582 6827,in/ahmed-moreno,Melbourne,Australia
+pe_163,co_58,Jordan Shah,Director of Continuing Education,C-Suite,Product & Eng,jordan.shah@bellhavenuniversit.co,Catch-all,false,,in/jordan-shah,Melbourne,Australia
+pe_164,co_58,Liam Hall,VP Academic,VP,Academic,liam.hall@bellhavenuniversit.co,Verified,true,,in/liam-hall,Melbourne,Australia
+pe_165,co_58,Keiko Reyes,Director of Teaching & Learning,C-Suite,Product & Eng,keiko.reyes@bellhavenuniversit.co,Unverified,false,,in/keiko-reyes,Melbourne,Australia
+pe_166,co_59,Lena Rossi,Managing Partner,C-Suite,Executive,lena.rossi@yarrowstack.org,Verified,true,,in/lena-rossi,Minneapolis,United States
+pe_167,co_59,Tunde Shah,Practice Lead,Manager,Executive,tunde.shah@yarrowstack.org,Verified,true,+1 877 352 7479,in/tunde-shah,Minneapolis,United States
+pe_168,co_60,Emily Mendes,VP Revenue,VP,Sales,emily.mendes@havenmark.org,Verified,true,,in/emily-mendes,Victoria,Canada
+pe_169,co_60,David Aziz,CEO,C-Suite,Executive,david.aziz@havenmark.org,Verified,true,+1 492 730 7390,in/david-aziz,Victoria,Canada
+pe_170,co_61,Liam Whitfield,CFO,C-Suite,Executive,liam.whitfield@driftgrove.com,Verified,true,,in/liam-whitfield,London,United Kingdom
+pe_171,co_61,Jeroen Wolf,VP Revenue,VP,Sales,jeroen.wolf@driftgrove.com,Verified,true,,in/jeroen-wolf,London,United Kingdom
+pe_172,co_62,Andre Duarte,Head of Growth,Head,Sales,andre.duarte@driftcore.ca,Verified,true,+1 797 231 6369,in/andre-duarte,Pickering,Canada
+pe_173,co_62,Camille Chen,Managing Director,C-Suite,Product & Eng,camille.chen@driftcore.ca,Verified,true,,in/camille-chen,Pickering,Canada
+pe_174,co_62,Camille Walker,Founder,C-Suite,Executive,camille.walker@driftcore.ca,Verified,true,,in/camille-walker,Pickering,Canada
+pe_175,co_63,Sofia Brooks,CFO,C-Suite,Executive,sofia.brooks@crestlabs.co,Verified,true,+1 554 394 9138,in/sofia-brooks,Oshawa,Canada
+pe_176,co_63,Theo Osei,CEO,C-Suite,Executive,theo.osei@crestlabs.co,Verified,true,,in/theo-osei,Oshawa,Canada
+pe_177,co_64,Theo Duarte,AVP Innovation,VP,Executive,theo.duarte@eastvalecollege.ca,Catch-all,false,,in/theo-duarte,Philadelphia,United States
+pe_178,co_64,Colin Nguyen,Director of Teaching & Learning,C-Suite,Product & Eng,colin.nguyen@eastvalecollege.ca,Verified,true,+1 752 751 7408,in/colin-nguyen,Philadelphia,United States
+pe_179,co_65,Nadia Devlin,Founder,C-Suite,Executive,nadia.devlin@tamarackshift.io,Catch-all,false,,in/nadia-devlin,Portland,United States
+pe_180,co_65,Aisha Bello,Head of Growth,Head,Sales,aisha.bello@tamarackshift.io,Unverified,false,,in/aisha-bello,Portland,United States
+pe_181,co_66,Jordan Brown,Head of Growth,Head,Sales,jordan.brown@dunegate.edu,Verified,true,,in/jordan-brown,Chicago,United States
+pe_182,co_66,Keiko Walker,New Business Director,C-Suite,Product & Eng,keiko.walker@dunegate.edu,Verified,true,,in/keiko-walker,Chicago,United States
+pe_183,co_66,Ahmed Brooks,Founder,C-Suite,Executive,ahmed.brooks@dunegate.edu,Verified,true,+1 762 927 6048,in/ahmed-brooks,Chicago,United States
+pe_184,co_66,Petra Price,Managing Director,C-Suite,Product & Eng,petra.price@dunegate.edu,Verified,true,,in/petra-price,Chicago,United States
+pe_185,co_67,Ahmed Wilson,Registrar,Director,Academic,ahmed.wilson@stonebridgecollege.edu,Verified,true,,in/ahmed-wilson,Berlin,Germany
+pe_186,co_67,Jeroen Mbeki,AVP Innovation,VP,Executive,jeroen.mbeki@stonebridgecollege.edu,Verified,true,,in/jeroen-mbeki,Berlin,Germany
+pe_187,co_67,Ruby Ford,Director of Teaching & Learning,C-Suite,Product & Eng,ruby.ford@stonebridgecollege.edu,Verified,true,+1 978 487 1658,in/ruby-ford,Berlin,Germany
+pe_188,co_67,Laura Patel,Dean of Students,Director,Academic,laura.patel@stonebridgecollege.edu,Verified,true,+1 268 571 7843,in/laura-patel,Berlin,Germany
+pe_189,co_68,Lena Haddad,Chief Operating Officer,C-Suite,Executive,lena.haddad@nimbusspan.edu,Verified,true,+1 308 842 6001,in/lena-haddad,Detroit,United States
+pe_190,co_68,Keiko Holm,Practice Lead,Manager,Executive,keiko.holm@nimbusspan.edu,Verified,true,+1 688 548 3657,in/keiko-holm,Detroit,United States
+pe_191,co_69,Omar Murphy,Founder,C-Suite,Executive,omar.murphy@northpeak.com,Verified,true,,in/omar-murphy,Portland,United States
+pe_192,co_69,Noah Kim,New Business Director,C-Suite,Product & Eng,noah.kim@northpeak.com,Verified,true,,in/noah-kim,Portland,United States
+pe_193,co_69,Priya Ward,Head of Growth,Head,Sales,priya.ward@northpeak.com,Verified,true,+1 252 424 6606,in/priya-ward,Portland,United States
+pe_194,co_70,Ivan Ward,Head of Product,Head,Product & Eng,ivan.ward@driftgate.ca,Catch-all,false,,in/ivan-ward,Chicago,United States
+pe_195,co_70,Jeroen Visser,Chief Learning Officer,C-Suite,People & L&D,jeroen.visser@driftgate.ca,Unverified,false,,in/jeroen-visser,Chicago,United States
+pe_196,co_70,Nina Okonkwo,Director of Partnerships,C-Suite,Sales,nina.okonkwo@driftgate.ca,Verified,true,,in/nina-okonkwo,Chicago,United States
+pe_197,co_70,Bianca Berger,VP Sales,VP,Sales,bianca.berger@driftgate.ca,Verified,true,,in/bianca-berger,Chicago,United States
+pe_198,co_71,Marcus Dubois,Executive Director,C-Suite,Product & Eng,marcus.dubois@juniperforge.com,Unverified,false,,in/marcus-dubois,Toronto,Canada
+pe_199,co_71,Nina Fraser,Development Director,C-Suite,Product & Eng,nina.fraser@juniperforge.com,Unverified,false,,in/nina-fraser,Toronto,Canada
+pe_200,co_72,Emily Okafor,Director of Continuing Education,C-Suite,Product & Eng,emily.okafor@highfielduniversit.edu,Verified,true,+1 396 787 7664,in/emily-okafor,Montreal,Canada
+pe_201,co_72,Aisha Haddad,Dean of Students,Director,Academic,aisha.haddad@highfielduniversit.edu,Verified,true,,in/aisha-haddad,Montreal,Canada
+pe_202,co_72,Mia Holm,Director of Teaching & Learning,C-Suite,Product & Eng,mia.holm@highfielduniversit.edu,Catch-all,false,,in/mia-holm,Montreal,Canada
+pe_203,co_73,Marc Clarke,VP Revenue,VP,Sales,marc.clarke@juniperwave.co,Verified,true,+1 797 282 1647,in/marc-clarke,Toronto,Canada
+pe_204,co_73,Erik Rossi,CFO,C-Suite,Executive,erik.rossi@juniperwave.co,Verified,true,,in/erik-rossi,Toronto,Canada
+pe_205,co_74,Malik Bello,Chief Operating Officer,C-Suite,Executive,malik.bello@meridianline.ca,Verified,true,,in/malik-bello,Atlanta,United States
+pe_206,co_74,Dmitri Devlin,Managing Partner,C-Suite,Executive,dmitri.devlin@meridianline.ca,Verified,true,+1 876 215 2513,in/dmitri-devlin,Atlanta,United States
+pe_207,co_75,Camille Dubois,Chief Learning Officer,C-Suite,People & L&D,camille.dubois@beaconscope.io,Verified,true,+1 865 397 8969,in/camille-dubois,Chicago,United States
+pe_208,co_75,Leah Mendes,CEO,C-Suite,Executive,leah.mendes@beaconscope.io,Verified,true,,in/leah-mendes,Chicago,United States
+pe_209,co_76,Freja Brown,Director of Partnerships,C-Suite,Sales,freja.brown@larchgrove.edu,Verified,true,+1 265 979 5676,in/freja-brown,Atlanta,United States
+pe_210,co_76,Marcus Andersson,Chief Learning Officer,C-Suite,People & L&D,marcus.andersson@larchgrove.edu,Verified,true,,in/marcus-andersson,Atlanta,United States
+pe_211,co_76,Sam Ward,VP Sales,VP,Sales,sam.ward@larchgrove.edu,Verified,true,+1 590 973 4841,in/sam-ward,Atlanta,United States
+pe_212,co_76,Raj Kowalski,CEO,C-Suite,Executive,raj.kowalski@larchgrove.edu,Verified,true,,in/raj-kowalski,Atlanta,United States
+pe_213,co_77,Marc Bergeron,CEO,C-Suite,Executive,marc.bergeron@duneworks.com,Verified,true,,in/marc-bergeron,Edmonton,Canada
+pe_214,co_77,Raj Turner,Chief Learning Officer,C-Suite,People & L&D,raj.turner@duneworks.com,Verified,true,+1 577 599 9636,in/raj-turner,Edmonton,Canada
+pe_215,co_78,Jordan Cole,VP People,VP,People & L&D,jordan.cole@fernpeak.ca,Verified,true,,in/jordan-cole,Boston,United States
+pe_216,co_78,Petra Wolf,CHRO,C-Suite,People & L&D,petra.wolf@fernpeak.ca,Verified,true,+1 983 909 9838,in/petra-wolf,Boston,United States
+pe_217,co_78,Farah Whitfield,Head of L&D,Head,People & L&D,farah.whitfield@fernpeak.ca,Catch-all,false,,in/farah-whitfield,Boston,United States
+pe_218,co_79,Ahmed Diaz,VP People,VP,People & L&D,ahmed.diaz@willowlabs.edu,Catch-all,false,,in/ahmed-diaz,Hamilton,Canada
+pe_219,co_79,Rachel Tremblay,Director of Talent Development,C-Suite,Product & Eng,rachel.tremblay@willowlabs.edu,Verified,true,,in/rachel-tremblay,Hamilton,Canada
+pe_220,co_79,Camille Chen,Head of L&D,Head,People & L&D,camille.chen@willowlabs.edu,Verified,true,+1 276 317 1128,in/camille-chen,Hamilton,Canada
+pe_221,co_79,Ella Nguyen,CHRO,C-Suite,People & L&D,ella.nguyen@willowlabs.edu,Verified,true,+1 406 461 4263,in/ella-nguyen,Hamilton,Canada
+pe_222,co_80,Darius Wilson,CEO,C-Suite,Executive,darius.wilson@vantagecore.com,Verified,true,+1 219 675 3198,in/darius-wilson,Ottawa,Canada
+pe_223,co_80,Kevin Whitfield,Chief Medical Officer,C-Suite,Executive,kevin.whitfield@vantagecore.com,Verified,true,+1 216 326 6333,in/kevin-whitfield,Ottawa,Canada
+pe_224,co_80,Lena Aziz,Director of Clinical Ops,C-Suite,Product & Eng,lena.aziz@vantagecore.com,Verified,true,,in/lena-aziz,Ottawa,Canada
+pe_225,co_81,Victor Aziz,Development Director,C-Suite,Product & Eng,victor.aziz@harbourworks.org,Verified,true,+1 732 674 7334,in/victor-aziz,New York,United States
+pe_226,co_81,Ella Ali,Executive Director,C-Suite,Product & Eng,ella.ali@harbourworks.org,Unverified,false,,in/ella-ali,New York,United States
+pe_227,co_81,Nadia Obi,Director of Programs,C-Suite,Product & Eng,nadia.obi@harbourworks.org,Unverified,false,,in/nadia-obi,New York,United States
+pe_228,co_82,Liam Moreno,AVP Innovation,VP,Executive,liam.moreno@coldwaterinstitute.com,Verified,true,+1 282 273 2746,in/liam-moreno,Minneapolis,United States
+pe_229,co_82,Erik Duarte,VP Academic,VP,Academic,erik.duarte@coldwaterinstitute.com,Verified,true,,in/erik-duarte,Minneapolis,United States
+pe_230,co_82,Andre Cole,Dean of Students,Director,Academic,andre.cole@coldwaterinstitute.com,Verified,true,+1 681 878 7546,in/andre-cole,Minneapolis,United States
+pe_231,co_82,Jordan Halvorsen,Registrar,Director,Academic,jordan.halvorsen@coldwaterinstitute.com,Verified,true,,in/jordan-halvorsen,Minneapolis,United States
+pe_232,co_83,Ruby Obi,VP Revenue,VP,Sales,ruby.obi@cardinalfield.org,Verified,true,,in/ruby-obi,Ottawa,Canada
+pe_233,co_83,Mia Fernandez,CEO,C-Suite,Executive,mia.fernandez@cardinalfield.org,Verified,true,,in/mia-fernandez,Ottawa,Canada
+pe_234,co_83,Noah Nguyen,Chief Compliance Officer,C-Suite,Executive,noah.nguyen@cardinalfield.org,Catch-all,false,,in/noah-nguyen,Ottawa,Canada
+pe_235,co_84,Wei Rahman,CHRO,C-Suite,People & L&D,wei.rahman@verdantmark.ca,Verified,true,+1 924 880 6926,in/wei-rahman,Detroit,United States
+pe_236,co_84,Nia Blake,VP People,VP,People & L&D,nia.blake@verdantmark.ca,Verified,true,+1 356 372 2534,in/nia-blake,Detroit,United States
+pe_237,co_84,Marc Devlin,Head of L&D,Head,People & L&D,marc.devlin@verdantmark.ca,Verified,true,,in/marc-devlin,Detroit,United States
+pe_238,co_85,Priya Fernandez,Head of L&D,Head,People & L&D,priya.fernandez@dunefield.com,Verified,true,+1 480 951 1231,in/priya-fernandez,Portland,United States
+pe_239,co_85,Leah Lim,VP People,VP,People & L&D,leah.lim@dunefield.com,Verified,true,,in/leah-lim,Portland,United States
+pe_240,co_86,Chris Halvorsen,CEO,C-Suite,Executive,chris.halvorsen@verdantcore.ca,Verified,true,,in/chris-halvorsen,Glasgow,United Kingdom
+pe_241,co_86,Wei Ward,VP Sales,VP,Sales,wei.ward@verdantcore.ca,Unverified,false,,in/wei-ward,Glasgow,United Kingdom
+pe_242,co_86,Ingrid Fernandez,Director of Clinical Ops,C-Suite,Product & Eng,ingrid.fernandez@verdantcore.ca,Verified,true,+1 925 523 3224,in/ingrid-fernandez,Glasgow,United Kingdom
+pe_243,co_87,Lucia Devlin,Registrar,Director,Academic,lucia.devlin@draycottuniversity.ca,Verified,true,+1 382 942 2618,in/lucia-devlin,Los Angeles,United States
+pe_244,co_87,Marc Zhao,AVP Innovation,VP,Executive,marc.zhao@draycottuniversity.ca,Verified,true,+1 452 691 7539,in/marc-zhao,Los Angeles,United States
+pe_245,co_87,Klaus Holm,Director of Teaching & Learning,C-Suite,Product & Eng,klaus.holm@draycottuniversity.ca,Unverified,false,,in/klaus-holm,Los Angeles,United States
+pe_246,co_87,Priya Ford,Director of Continuing Education,C-Suite,Product & Eng,priya.ford@draycottuniversity.ca,Verified,true,+1 583 211 6679,in/priya-ford,Los Angeles,United States
+pe_247,co_88,Bianca Rahman,Chief Learning Officer,C-Suite,People & L&D,bianca.rahman@ironpoint.ca,Verified,true,+1 954 515 9149,in/bianca-rahman,Oshawa,Canada
+pe_248,co_88,Lucia Haddad,CEO,C-Suite,Executive,lucia.haddad@ironpoint.ca,Verified,true,,in/lucia-haddad,Oshawa,Canada
+pe_249,co_89,Klaus Dubois,Head of Growth,Head,Sales,klaus.dubois@juniperworks.io,Verified,true,,in/klaus-dubois,Quebec City,Canada
+pe_250,co_89,Liam Wolf,CTO,C-Suite,Product & Eng,liam.wolf@juniperworks.io,Verified,true,,in/liam-wolf,Quebec City,Canada
+pe_251,co_89,Freja Miller,VP Sales,VP,Sales,freja.miller@juniperworks.io,Unverified,false,,in/freja-miller,Quebec City,Canada
+pe_252,co_90,Erik Sorensen,CEO,C-Suite,Executive,erik.sorensen@fernstack.ca,Catch-all,false,,in/erik-sorensen,Victoria,Canada
+pe_253,co_90,Yusuf Santos,Head of Product,Head,Product & Eng,yusuf.santos@fernstack.ca,Catch-all,false,,in/yusuf-santos,Victoria,Canada
+pe_254,co_90,Laura Brooks,Chief Learning Officer,C-Suite,People & L&D,laura.brooks@fernstack.ca,Verified,true,,in/laura-brooks,Victoria,Canada
+pe_255,co_91,Theo Price,Registrar,Director,Academic,theo.price@fernbrookcollegeof.com,Verified,true,+1 207 921 8778,in/theo-price,Melbourne,Australia
+pe_256,co_91,Yusuf Nolan,Director of Continuing Education,C-Suite,Product & Eng,yusuf.nolan@fernbrookcollegeof.com,Verified,true,,in/yusuf-nolan,Melbourne,Australia
+pe_257,co_91,Sam Berger,AVP Innovation,VP,Executive,sam.berger@fernbrookcollegeof.com,Verified,true,,in/sam-berger,Melbourne,Australia
+pe_258,co_91,Ben Laurent,Director of Teaching & Learning,C-Suite,Product & Eng,ben.laurent@fernbrookcollegeof.com,Verified,true,+1 597 942 3662,in/ben-laurent,Melbourne,Australia
+pe_259,co_92,Jordan Duarte,Director of Talent Development,C-Suite,Product & Eng,jordan.duarte@beaconrise.ca,Catch-all,false,,in/jordan-duarte,San Francisco,United States
+pe_260,co_92,Andre Okafor,Head of L&D,Head,People & L&D,andre.okafor@beaconrise.ca,Verified,true,+1 668 419 3975,in/andre-okafor,San Francisco,United States
+pe_261,co_92,Freja Fraser,CHRO,C-Suite,People & L&D,freja.fraser@beaconrise.ca,Verified,true,+1 389 583 4605,in/freja-fraser,San Francisco,United States
+pe_262,co_93,Marc Nolan,Head of Product,Head,Product & Eng,marc.nolan@mapleworks.ca,Verified,true,+1 660 620 3819,in/marc-nolan,Philadelphia,United States
+pe_263,co_94,Omar Hall,Head of L&D,Head,People & L&D,omar.hall@umbragate.co,Verified,true,,in/omar-hall,London,United Kingdom
+pe_264,co_94,Lucia Nguyen,Director of Talent Development,C-Suite,Product & Eng,lucia.nguyen@umbragate.co,Verified,true,+1 697 981 9443,in/lucia-nguyen,London,United Kingdom
+pe_265,co_94,Colin Osei,CHRO,C-Suite,People & L&D,colin.osei@umbragate.co,Verified,true,+1 406 237 5904,in/colin-osei,London,United Kingdom
+pe_266,co_95,Chinwe Moreno,Founder,C-Suite,Executive,chinwe.moreno@nimbusscope.com,Verified,true,+1 674 337 3972,in/chinwe-moreno,New York,United States
+pe_267,co_95,Ivan Kowalski,New Business Director,C-Suite,Product & Eng,ivan.kowalski@nimbusscope.com,Verified,true,,in/ivan-kowalski,New York,United States
+pe_268,co_95,Ella Ward,Head of Growth,Head,Sales,ella.ward@nimbusscope.com,Unverified,false,,in/ella-ward,New York,United States
+pe_269,co_95,Yusuf Sorensen,Managing Director,C-Suite,Product & Eng,yusuf.sorensen@nimbusscope.com,Verified,true,+1 303 753 6404,in/yusuf-sorensen,New York,United States
+pe_270,co_96,Lucia Zhao,Head of Growth,Head,Sales,lucia.zhao@meridiangrove.edu,Verified,true,+1 961 876 5967,in/lucia-zhao,Miami,United States
+pe_271,co_96,Hollie Petrov,Managing Director,C-Suite,Product & Eng,hollie.petrov@meridiangrove.edu,Verified,true,,in/hollie-petrov,Miami,United States
+pe_272,co_96,Liam Ford,Founder,C-Suite,Executive,liam.ford@meridiangrove.edu,Verified,true,+1 529 875 2323,in/liam-ford,Miami,United States
+pe_273,co_97,Jeroen Hall,Chief Compliance Officer,C-Suite,Executive,jeroen.hall@kestrelpoint.org,Verified,true,+1 748 997 1176,in/jeroen-hall,Montreal,Canada
+pe_274,co_97,Patrick Santos,Head of Partnerships,Head,Sales,patrick.santos@kestrelpoint.org,Unverified,false,,in/patrick-santos,Montreal,Canada
+pe_275,co_97,Salma Vogt,VP Revenue,VP,Sales,salma.vogt@kestrelpoint.org,Unverified,false,,in/salma-vogt,Montreal,Canada
+pe_276,co_98,Sam Murphy,Head of Security Engineering,Head,Product & Eng,sam.murphy@brightworks.com,Verified,true,,in/sam-murphy,Waterloo,Canada
+pe_277,co_98,Liam Rahman,CISO,C-Suite,Executive,liam.rahman@brightworks.com,Verified,true,,in/liam-rahman,Waterloo,Canada
+pe_278,co_98,Sean Duarte,VP Sales,VP,Sales,sean.duarte@brightworks.com,Verified,true,,in/sean-duarte,Waterloo,Canada
+pe_279,co_99,Rosa Petrov,CFO,C-Suite,Executive,rosa.petrov@dunescope.org,Catch-all,false,,in/rosa-petrov,Atlanta,United States
+pe_280,co_99,Salma Vogt,CEO,C-Suite,Executive,salma.vogt@dunescope.org,Verified,true,,in/salma-vogt,Atlanta,United States
+pe_281,co_99,Nadia Nguyen,VP Revenue,VP,Sales,nadia.nguyen@dunescope.org,Verified,true,,in/nadia-nguyen,Atlanta,United States
+pe_282,co_100,Olivia Berger,Head of Product,Head,Product & Eng,olivia.berger@onyxlabs.org,Verified,true,+1 493 906 8658,in/olivia-berger,Leeds,United Kingdom
+pe_283,co_100,Victor Rivera,Director of Partnerships,C-Suite,Sales,victor.rivera@onyxlabs.org,Verified,true,+1 491 480 9911,in/victor-rivera,Leeds,United Kingdom
+pe_284,co_100,Lena Nguyen,VP Sales,VP,Sales,lena.nguyen@onyxlabs.org,Verified,true,,in/lena-nguyen,Leeds,United Kingdom
+pe_285,co_101,Camille Aziz,Chief Learning Officer,C-Suite,People & L&D,camille.aziz@meridianforge.edu,Verified,true,,in/camille-aziz,Seattle,United States
+pe_286,co_102,Ahmed Dubois,Director of Programs,C-Suite,Product & Eng,ahmed.dubois@willowpath.io,Catch-all,false,,in/ahmed-dubois,Philadelphia,United States
+pe_287,co_102,Gabriel Shah,Development Director,C-Suite,Product & Eng,gabriel.shah@willowpath.io,Verified,true,+1 901 647 1289,in/gabriel-shah,Philadelphia,United States
+pe_288,co_103,Tanya Nguyen,Director of Programs,C-Suite,Product & Eng,tanya.nguyen@willowwave.edu,Verified,true,,in/tanya-nguyen,London,Canada
+pe_289,co_103,Renee Nguyen,Executive Director,C-Suite,Product & Eng,renee.nguyen@willowwave.edu,Verified,true,+1 859 635 9516,in/renee-nguyen,London,Canada
+pe_290,co_104,Lena Cole,Director of Teaching & Learning,C-Suite,Product & Eng,lena.cole@bellhavenpolytechn.co,Verified,true,,in/lena-cole,Toronto,Canada
+pe_291,co_104,Nadia Dubois,Registrar,Director,Academic,nadia.dubois@bellhavenpolytechn.co,Verified,true,,in/nadia-dubois,Toronto,Canada
+pe_292,co_104,Leah Walker,Director of Continuing Education,C-Suite,Product & Eng,leah.walker@bellhavenpolytechn.co,Verified,true,+1 347 693 3065,in/leah-walker,Toronto,Canada
+pe_293,co_104,Maya Walker,Dean of Students,Director,Academic,maya.walker@bellhavenpolytechn.co,Verified,true,,in/maya-walker,Toronto,Canada
+pe_294,co_105,Tanya Rivera,Chief Operating Officer,C-Suite,Executive,tanya.rivera@umbragrove.edu,Verified,true,+1 904 666 9307,in/tanya-rivera,Hamilton,Canada
+pe_295,co_105,Sam Holm,Practice Lead,Manager,Executive,sam.holm@umbragrove.edu,Verified,true,+1 824 860 4032,in/sam-holm,Hamilton,Canada
+pe_296,co_106,Ingrid Clarke,Founder,C-Suite,Executive,ingrid.clarke@juniperpeak.co,Verified,true,,in/ingrid-clarke,Seattle,United States
+pe_297,co_106,Kevin Okafor,Managing Director,C-Suite,Product & Eng,kevin.okafor@juniperpeak.co,Verified,true,+1 539 506 8234,in/kevin-okafor,Seattle,United States
+pe_298,co_106,Ivan Santos,New Business Director,C-Suite,Product & Eng,ivan.santos@juniperpeak.co,Unverified,false,,in/ivan-santos,Seattle,United States
+pe_299,co_107,Freja Berger,VP People,VP,People & L&D,freja.berger@emberpoint.co,Verified,true,+1 424 325 2166,in/freja-berger,Victoria,Canada
+pe_300,co_107,Ananya Kim,Director of Talent Development,C-Suite,Product & Eng,ananya.kim@emberpoint.co,Verified,true,+1 505 849 2529,in/ananya-kim,Victoria,Canada
+pe_301,co_107,Rachel Petrov,CHRO,C-Suite,People & L&D,rachel.petrov@emberpoint.co,Verified,true,,in/rachel-petrov,Victoria,Canada
+pe_302,co_108,Emily Kim,Head of Security Engineering,Head,Product & Eng,emily.kim@willowpeak.com,Verified,true,+1 382 646 1913,in/emily-kim,Hamilton,Canada
+pe_303,co_108,Renee Dubois,VP Sales,VP,Sales,renee.dubois@willowpeak.com,Unverified,false,,in/renee-dubois,Hamilton,Canada
+pe_304,co_109,Ben Visser,Head of Growth,Head,Sales,ben.visser@anchorpoint.com,Verified,true,+1 236 868 3290,in/ben-visser,Hamilton,Canada
+pe_305,co_109,Nina Ford,New Business Director,C-Suite,Product & Eng,nina.ford@anchorpoint.com,Unverified,false,,in/nina-ford,Hamilton,Canada
+pe_306,co_110,David Ward,Director of Demand Gen,C-Suite,Sales,david.ward@lumenrise.co,Verified,true,+1 890 228 7477,in/david-ward,San Francisco,United States
+pe_307,co_110,Chris Halvorsen,CTO,C-Suite,Product & Eng,chris.halvorsen@lumenrise.co,Verified,true,,in/chris-halvorsen,San Francisco,United States
+pe_308,co_111,Gabriel Farouk,Founder,C-Suite,Executive,gabriel.farouk@anchorpeak.co,Verified,true,,in/gabriel-farouk,London,Canada
+pe_309,co_111,Theo Brooks,New Business Director,C-Suite,Product & Eng,theo.brooks@anchorpeak.co,Verified,true,,in/theo-brooks,London,Canada
+pe_310,co_111,Lucia Rahman,Head of Growth,Head,Sales,lucia.rahman@anchorpeak.co,Catch-all,false,,in/lucia-rahman,London,Canada
+pe_311,co_112,Marcus Brown,CEO,C-Suite,Executive,marcus.brown@alderloop.co,Verified,true,,in/marcus-brown,Victoria,Canada
+pe_312,co_112,Malik Farouk,VP Sales,VP,Sales,malik.farouk@alderloop.co,Verified,true,,in/malik-farouk,Victoria,Canada
+pe_313,co_112,Omar Clarke,Director of Clinical Ops,C-Suite,Product & Eng,omar.clarke@alderloop.co,Catch-all,false,,in/omar-clarke,Victoria,Canada
+pe_314,co_113,Leah Cole,Head of Product,Head,Product & Eng,leah.cole@creststack.edu,Verified,true,,in/leah-cole,Ottawa,Canada
+pe_315,co_113,Klaus Andersson,Director of Partnerships,C-Suite,Sales,klaus.andersson@creststack.edu,Verified,true,,in/klaus-andersson,Ottawa,Canada
+pe_316,co_113,Ahmed Fernandez,CEO,C-Suite,Executive,ahmed.fernandez@creststack.edu,Verified,true,+1 271 356 5174,in/ahmed-fernandez,Ottawa,Canada
+pe_317,co_114,Ahmed Okafor,CEO,C-Suite,Executive,ahmed.okafor@dunewave.io,Verified,true,+1 473 800 6517,in/ahmed-okafor,San Francisco,United States
+pe_318,co_114,Salma Diaz,VP Sales,VP,Sales,salma.diaz@dunewave.io,Catch-all,false,,in/salma-diaz,San Francisco,United States
+pe_319,co_115,Raj Fraser,Head of L&D,Head,People & L&D,raj.fraser@basinspan.edu,Catch-all,false,,in/raj-fraser,Nashville,United States
+pe_320,co_115,Chinwe Tremblay,VP People,VP,People & L&D,chinwe.tremblay@basinspan.edu,Verified,true,,in/chinwe-tremblay,Nashville,United States
+pe_321,co_115,Colin Duarte,CHRO,C-Suite,People & L&D,colin.duarte@basinspan.edu,Verified,true,,in/colin-duarte,Nashville,United States
+pe_322,co_116,Darius Mbeki,VP Sales,VP,Sales,darius.mbeki@duneloop.io,Verified,true,,in/darius-mbeki,Sydney,Australia
+pe_323,co_116,Victor Berger,Director of Demand Gen,C-Suite,Sales,victor.berger@duneloop.io,Verified,true,,in/victor-berger,Sydney,Australia
+pe_324,co_116,Noah Sorensen,CEO,C-Suite,Executive,noah.sorensen@duneloop.io,Unverified,false,,in/noah-sorensen,Sydney,Australia
+pe_325,co_117,Hollie Mendes,AVP Innovation,VP,Executive,hollie.mendes@claremontcollegeof.edu,Verified,true,,in/hollie-mendes,Seattle,United States
+pe_326,co_117,Salma Marchetti,Director of Continuing Education,C-Suite,Product & Eng,salma.marchetti@claremontcollegeof.edu,Verified,true,,in/salma-marchetti,Seattle,United States
+pe_327,co_117,Salma Visser,Registrar,Director,Academic,salma.visser@claremontcollegeof.edu,Verified,true,+1 636 785 3974,in/salma-visser,Seattle,United States
+pe_328,co_117,Alex Moreno,Director of Teaching & Learning,C-Suite,Product & Eng,alex.moreno@claremontcollegeof.edu,Verified,true,+1 276 794 1993,in/alex-moreno,Seattle,United States
+pe_329,co_118,Alex Laurent,CEO,C-Suite,Executive,alex.laurent@lumenscope.io,Catch-all,false,,in/alex-laurent,London,United Kingdom
+pe_330,co_118,Rosa Chen,Director of Clinical Ops,C-Suite,Product & Eng,rosa.chen@lumenscope.io,Unverified,false,,in/rosa-chen,London,United Kingdom
+pe_331,co_119,Raj Fernandez,CEO,C-Suite,Executive,raj.fernandez@harbourpath.io,Verified,true,,in/raj-fernandez,Toronto,Canada
+pe_332,co_119,Omar Ward,Chief Learning Officer,C-Suite,People & L&D,omar.ward@harbourpath.io,Verified,true,+1 378 942 3549,in/omar-ward,Toronto,Canada
+pe_333,co_119,Raj Kowalski,Head of Product,Head,Product & Eng,raj.kowalski@harbourpath.io,Verified,true,+1 533 429 3923,in/raj-kowalski,Toronto,Canada
+pe_334,co_119,Bianca Fernandez,Director of Partnerships,C-Suite,Sales,bianca.fernandez@harbourpath.io,Verified,true,,in/bianca-fernandez,Toronto,Canada
+pe_335,co_120,Marcus Nguyen,Managing Partner,C-Suite,Executive,marcus.nguyen@cardinalstack.ca,Verified,true,,in/marcus-nguyen,Waterloo,Canada
+pe_336,co_120,Petra Fernandez,Director of Business Development,C-Suite,Sales,petra.fernandez@cardinalstack.ca,Verified,true,,in/petra-fernandez,Waterloo,Canada
+pe_337,co_120,Maya Lindqvist,Chief Operating Officer,C-Suite,Executive,maya.lindqvist@cardinalstack.ca,Verified,true,+1 292 762 2821,in/maya-lindqvist,Waterloo,Canada
+pe_338,co_121,Olivia Fraser,AVP Innovation,VP,Executive,olivia.fraser@rowanhillcollegeof.org,Verified,true,+1 741 816 2745,in/olivia-fraser,Waterloo,Canada
+pe_339,co_121,Grace Wolf,Dean of Students,Director,Academic,grace.wolf@rowanhillcollegeof.org,Catch-all,false,,in/grace-wolf,Waterloo,Canada
+pe_340,co_121,Ben Rivera,VP Academic,VP,Academic,ben.rivera@rowanhillcollegeof.org,Verified,true,+1 902 889 1966,in/ben-rivera,Waterloo,Canada
+pe_341,co_121,Chinwe Duarte,Registrar,Director,Academic,chinwe.duarte@rowanhillcollegeof.org,Verified,true,,in/chinwe-duarte,Waterloo,Canada
+pe_342,co_122,Noah Farouk,Director of Talent Development,C-Suite,Product & Eng,noah.farouk@compassforge.co,Verified,true,,in/noah-farouk,Seattle,United States
+pe_343,co_123,Victor Rivera,Head of Product,Head,Product & Eng,victor.rivera@alderfield.com,Verified,true,+1 919 278 1764,in/victor-rivera,Toronto,Canada
+pe_344,co_123,Dmitri Laurent,CEO,C-Suite,Executive,dmitri.laurent@alderfield.com,Verified,true,,in/dmitri-laurent,Toronto,Canada
+pe_345,co_123,Victor Turner,Director of Partnerships,C-Suite,Sales,victor.turner@alderfield.com,Verified,true,,in/victor-turner,Toronto,Canada
+pe_346,co_123,Chris Brown,VP Sales,VP,Sales,chris.brown@alderfield.com,Verified,true,+1 698 722 3059,in/chris-brown,Toronto,Canada
+pe_347,co_124,Ivan Ford,Managing Director,C-Suite,Product & Eng,ivan.ford@dunepoint.io,Verified,true,+1 613 462 7388,in/ivan-ford,Miami,United States
+pe_348,co_124,Bianca Duarte,Founder,C-Suite,Executive,bianca.duarte@dunepoint.io,Verified,true,,in/bianca-duarte,Miami,United States
+pe_349,co_125,Tom Andersson,Registrar,Director,Academic,tom.andersson@highfieldinstitute.io,Verified,true,,in/tom-andersson,London,United Kingdom
+pe_350,co_125,Keiko Rossi,VP Academic,VP,Academic,keiko.rossi@highfieldinstitute.io,Verified,true,,in/keiko-rossi,London,United Kingdom
+pe_351,co_125,Yusuf Marchetti,Dean of Students,Director,Academic,yusuf.marchetti@highfieldinstitute.io,Verified,true,,in/yusuf-marchetti,London,United Kingdom
+pe_352,co_126,Theo Santos,CEO,C-Suite,Executive,theo.santos@ridgewave.io,Verified,true,,in/theo-santos,Munich,Germany
+pe_353,co_126,Maya Halvorsen,CFO,C-Suite,Executive,maya.halvorsen@ridgewave.io,Verified,true,,in/maya-halvorsen,Munich,Germany
+pe_354,co_126,Ella Farouk,Chief Compliance Officer,C-Suite,Executive,ella.farouk@ridgewave.io,Verified,true,+1 979 529 6326,in/ella-farouk,Munich,Germany
+pe_355,co_126,Rosa Obi,Head of Partnerships,Head,Sales,rosa.obi@ridgewave.io,Verified,true,+1 691 303 1888,in/rosa-obi,Munich,Germany
+pe_356,co_127,Chris Diaz,Chief Operating Officer,C-Suite,Executive,chris.diaz@yarrowshift.com,Verified,true,,in/chris-diaz,Edmonton,Canada
+pe_357,co_127,Nina Mendes,Director of Business Development,C-Suite,Sales,nina.mendes@yarrowshift.com,Verified,true,,in/nina-mendes,Edmonton,Canada
+pe_358,co_127,Tunde Zhao,Practice Lead,Manager,Executive,tunde.zhao@yarrowshift.com,Verified,true,+1 988 734 4469,in/tunde-zhao,Edmonton,Canada
+pe_359,co_128,Darius Andersson,VP Academic,VP,Academic,darius.andersson@kingsmerecollegeof.org,Verified,true,,in/darius-andersson,Waterloo,Canada
+pe_360,co_128,Sam Miller,Registrar,Director,Academic,sam.miller@kingsmerecollegeof.org,Verified,true,,in/sam-miller,Waterloo,Canada
+pe_361,co_128,Amir Reyes,AVP Innovation,VP,Executive,amir.reyes@kingsmerecollegeof.org,Verified,true,,in/amir-reyes,Waterloo,Canada
+pe_362,co_128,Ananya Mbeki,Director of Continuing Education,C-Suite,Product & Eng,ananya.mbeki@kingsmerecollegeof.org,Verified,true,,in/ananya-mbeki,Waterloo,Canada
+pe_363,co_129,Josephine Brooks,Development Director,C-Suite,Product & Eng,josephine.brooks@pinnaclestack.org,Verified,true,+1 804 282 5974,in/josephine-brooks,Montreal,Canada
+pe_364,co_129,Leah Mendes,Director of Programs,C-Suite,Product & Eng,leah.mendes@pinnaclestack.org,Verified,true,+1 779 331 8900,in/leah-mendes,Montreal,Canada
+pe_365,co_130,Hollie Haddad,VP Sales,VP,Sales,hollie.haddad@vantagescope.edu,Catch-all,false,,in/hollie-haddad,Hamilton,Canada
+pe_366,co_130,Ananya Novak,CEO,C-Suite,Executive,ananya.novak@vantagescope.edu,Verified,true,,in/ananya-novak,Hamilton,Canada
+pe_367,co_130,Tanya Nguyen,Head of Growth,Head,Sales,tanya.nguyen@vantagescope.edu,Unverified,false,,in/tanya-nguyen,Hamilton,Canada
+pe_368,co_131,Theo Lindqvist,Head of Partnerships,Head,Sales,theo.lindqvist@ironworks.org,Verified,true,,in/theo-lindqvist,Oshawa,Canada
+pe_369,co_131,Renee Diaz,Chief Compliance Officer,C-Suite,Executive,renee.diaz@ironworks.org,Unverified,false,,in/renee-diaz,Oshawa,Canada
+pe_370,co_131,Devon Brown,VP Revenue,VP,Sales,devon.brown@ironworks.org,Verified,true,,in/devon-brown,Oshawa,Canada
+pe_371,co_132,Freja Vogt,VP Academic,VP,Academic,freja.vogt@granthaminstitute.co,Verified,true,+1 759 910 8287,in/freja-vogt,London,Canada
+pe_372,co_132,Raj Kowalski,Director of Continuing Education,C-Suite,Product & Eng,raj.kowalski@granthaminstitute.co,Verified,true,,in/raj-kowalski,London,Canada
+pe_373,co_132,Chris Nguyen,Registrar,Director,Academic,chris.nguyen@granthaminstitute.co,Verified,true,+1 377 818 7110,in/chris-nguyen,London,Canada
+pe_374,co_133,Tunde Novak,CHRO,C-Suite,People & L&D,tunde.novak@arborlabs.io,Verified,true,,in/tunde-novak,Amsterdam,Netherlands
+pe_375,co_133,Hannah Bauer,Director of Talent Development,C-Suite,Product & Eng,hannah.bauer@arborlabs.io,Verified,true,+1 202 235 4917,in/hannah-bauer,Amsterdam,Netherlands
+pe_376,co_133,Yusuf Lim,Head of L&D,Head,People & L&D,yusuf.lim@arborlabs.io,Verified,true,,in/yusuf-lim,Amsterdam,Netherlands
+pe_377,co_134,Malik Chen,Head of Growth,Head,Sales,malik.chen@yarrowpeak.ca,Verified,true,,in/malik-chen,Miami,United States
+pe_378,co_134,Lucia Moreno,Managing Director,C-Suite,Product & Eng,lucia.moreno@yarrowpeak.ca,Catch-all,false,,in/lucia-moreno,Miami,United States
+pe_379,co_134,Marcus Novak,New Business Director,C-Suite,Product & Eng,marcus.novak@yarrowpeak.ca,Verified,true,+1 318 254 4921,in/marcus-novak,Miami,United States
+pe_380,co_135,Ella Aziz,New Business Director,C-Suite,Product & Eng,ella.aziz@pinnacleline.io,Verified,true,+1 658 805 6116,in/ella-aziz,Dublin,Ireland
+pe_381,co_135,Jeroen Mendes,Founder,C-Suite,Executive,jeroen.mendes@pinnacleline.io,Verified,true,+1 943 806 7346,in/jeroen-mendes,Dublin,Ireland
+pe_382,co_136,Kevin Turner,CISO,C-Suite,Executive,kevin.turner@quarryloop.com,Verified,true,+1 566 321 7320,in/kevin-turner,Montreal,Canada
+pe_383,co_137,Laura Cole,VP Academic,VP,Academic,laura.cole@sterlinginstitute.com,Verified,true,+1 850 823 5744,in/laura-cole,Burnaby,Canada
+pe_384,co_137,Carlos Ford,Registrar,Director,Academic,carlos.ford@sterlinginstitute.com,Verified,true,,in/carlos-ford,Burnaby,Canada
+pe_385,co_137,Wei Sorensen,Director of Continuing Education,C-Suite,Product & Eng,wei.sorensen@sterlinginstitute.com,Verified,true,+1 202 786 6490,in/wei-sorensen,Burnaby,Canada
+pe_386,co_138,Gabriel Whitfield,Director of Continuing Education,C-Suite,Product & Eng,gabriel.whitfield@rowanhilluniversit.co,Verified,true,,in/gabriel-whitfield,Chicago,United States
+pe_387,co_138,Mia Lindqvist,Dean of Students,Director,Academic,mia.lindqvist@rowanhilluniversit.co,Verified,true,+1 907 880 5897,in/mia-lindqvist,Chicago,United States
+pe_388,co_138,Marcus Okafor,Director of Teaching & Learning,C-Suite,Product & Eng,marcus.okafor@rowanhilluniversit.co,Verified,true,,in/marcus-okafor,Chicago,United States
+pe_389,co_139,Freja Price,CEO,C-Suite,Executive,freja.price@vantagemark.io,Verified,true,,in/freja-price,London,Canada
+pe_390,co_139,Lucia Zhao,CTO,C-Suite,Product & Eng,lucia.zhao@vantagemark.io,Verified,true,+1 564 662 3107,in/lucia-zhao,London,Canada
+pe_391,co_139,Andre Moreno,VP Sales,VP,Sales,andre.moreno@vantagemark.io,Verified,true,+1 815 484 1772,in/andre-moreno,London,Canada
+pe_392,co_140,Emily Wolf,Director of Programs,C-Suite,Product & Eng,emily.wolf@basinrise.ca,Verified,true,,in/emily-wolf,Waterloo,Canada
+pe_393,co_140,Ella Tanaka,Executive Director,C-Suite,Product & Eng,ella.tanaka@basinrise.ca,Unverified,false,,in/ella-tanaka,Waterloo,Canada
+pe_394,co_141,Marc Mbeki,VP Revenue,VP,Sales,marc.mbeki@cedarpeak.com,Verified,true,,in/marc-mbeki,Munich,Germany
+pe_395,co_141,Tanya Diaz,CEO,C-Suite,Executive,tanya.diaz@cedarpeak.com,Verified,true,,in/tanya-diaz,Munich,Germany
+pe_396,co_142,Farah Tanaka,VP Academic,VP,Academic,farah.tanaka@ravenscourtunivers.com,Verified,true,+1 401 878 6489,in/farah-tanaka,Hamilton,Canada
+pe_397,co_142,Erik Bergeron,AVP Innovation,VP,Executive,erik.bergeron@ravenscourtunivers.com,Verified,true,,in/erik-bergeron,Hamilton,Canada
+pe_398,co_142,Ahmed Grant,Dean of Students,Director,Academic,ahmed.grant@ravenscourtunivers.com,Verified,true,,in/ahmed-grant,Hamilton,Canada
+pe_399,co_142,Ruby Sorensen,Director of Teaching & Learning,C-Suite,Product & Eng,ruby.sorensen@ravenscourtunivers.com,Verified,true,+1 854 315 1152,in/ruby-sorensen,Hamilton,Canada
+pe_400,co_143,Malik Fernandez,Head of L&D,Head,People & L&D,malik.fernandez@basinscope.io,Verified,true,,in/malik-fernandez,Sydney,Australia
+pe_401,co_143,Ingrid Lim,VP People,VP,People & L&D,ingrid.lim@basinscope.io,Verified,true,,in/ingrid-lim,Sydney,Australia
+pe_402,co_144,Keiko Chen,VP Sales,VP,Sales,keiko.chen@arborgate.edu,Verified,true,,in/keiko-chen,Austin,United States
+pe_403,co_144,Marcus Wolf,CISO,C-Suite,Executive,marcus.wolf@arborgate.edu,Verified,true,+1 631 686 4741,in/marcus-wolf,Austin,United States
+pe_404,co_144,Tanya Visser,Head of Security Engineering,Head,Product & Eng,tanya.visser@arborgate.edu,Verified,true,+1 821 300 5678,in/tanya-visser,Austin,United States
+pe_405,co_145,Erik Iyer,Director of Talent Development,C-Suite,Product & Eng,erik.iyer@umbrarise.io,Verified,true,,in/erik-iyer,San Francisco,United States
+pe_406,co_145,Tom Diaz,Head of L&D,Head,People & L&D,tom.diaz@umbrarise.io,Verified,true,,in/tom-diaz,San Francisco,United States
+pe_407,co_145,Ruby Miller,VP People,VP,People & L&D,ruby.miller@umbrarise.io,Verified,true,,in/ruby-miller,San Francisco,United States
+pe_408,co_146,Raj Farouk,Managing Director,C-Suite,Product & Eng,raj.farouk@basinforge.com,Verified,true,,in/raj-farouk,London,United Kingdom
+pe_409,co_146,Theo Marchetti,New Business Director,C-Suite,Product & Eng,theo.marchetti@basinforge.com,Verified,true,,in/theo-marchetti,London,United Kingdom
+pe_410,co_147,Carlos Rahman,CEO,C-Suite,Executive,carlos.rahman@northpath.co,Verified,true,,in/carlos-rahman,San Francisco,United States
+pe_411,co_148,Sam Obi,Director of Talent Development,C-Suite,Product & Eng,sam.obi@anchorrise.ca,Verified,true,,in/sam-obi,Minneapolis,United States
+pe_412,co_148,Theo Santos,Head of L&D,Head,People & L&D,theo.santos@anchorrise.ca,Verified,true,+1 936 288 2692,in/theo-santos,Minneapolis,United States
+pe_413,co_149,David Bello,AVP Innovation,VP,Executive,david.bello@crestwoodpolytechn.co,Verified,true,+1 880 418 5703,in/david-bello,Edinburgh,United Kingdom
+pe_414,co_149,Victor Wolf,VP Academic,VP,Academic,victor.wolf@crestwoodpolytechn.co,Verified,true,+1 595 573 1557,in/victor-wolf,Edinburgh,United Kingdom
+pe_415,co_149,Dmitri Marchetti,Director of Continuing Education,C-Suite,Product & Eng,dmitri.marchetti@crestwoodpolytechn.co,Verified,true,,in/dmitri-marchetti,Edinburgh,United Kingdom
+pe_416,co_150,Alex Osei,Director of Business Development,C-Suite,Sales,alex.osei@basinwave.org,Verified,true,+1 206 406 1931,in/alex-osei,Rotterdam,Netherlands
+pe_417,co_150,Ella Holm,Practice Lead,Manager,Executive,ella.holm@basinwave.org,Verified,true,+1 859 202 7324,in/ella-holm,Rotterdam,Netherlands
+pe_418,co_151,Mia Chen,Director of Programs,C-Suite,Product & Eng,mia.chen@verdantline.org,Verified,true,+1 499 409 9961,in/mia-chen,Edinburgh,United Kingdom
+pe_419,co_151,Renee Blake,Development Director,C-Suite,Product & Eng,renee.blake@verdantline.org,Verified,true,+1 574 220 5365,in/renee-blake,Edinburgh,United Kingdom
+pe_420,co_151,Maya Okonkwo,Executive Director,C-Suite,Product & Eng,maya.okonkwo@verdantline.org,Catch-all,false,,in/maya-okonkwo,Edinburgh,United Kingdom
+pe_421,co_152,Ella Novak,Director of Business Development,C-Suite,Sales,ella.novak@aldergate.com,Verified,true,+1 552 940 8856,in/ella-novak,Berlin,Germany
+pe_422,co_152,Amir Halvorsen,Practice Lead,Manager,Executive,amir.halvorsen@aldergate.com,Unverified,false,,in/amir-halvorsen,Berlin,Germany
+pe_423,co_152,Klaus Bergeron,Managing Partner,C-Suite,Executive,klaus.bergeron@aldergate.com,Verified,true,+1 649 842 6905,in/klaus-bergeron,Berlin,Germany
+pe_424,co_153,Freja Wilson,Chief Compliance Officer,C-Suite,Executive,freja.wilson@cedarforge.edu,Verified,true,,in/freja-wilson,Hamilton,Canada
+pe_425,co_153,Farah Kowalski,CEO,C-Suite,Executive,farah.kowalski@cedarforge.edu,Verified,true,,in/farah-kowalski,Hamilton,Canada
+pe_426,co_154,Petra Duarte,Chief Learning Officer,C-Suite,People & L&D,petra.duarte@maplewave.io,Unverified,false,,in/petra-duarte,Chicago,United States
+pe_427,co_154,Hollie Osei,Head of Product,Head,Product & Eng,hollie.osei@maplewave.io,Verified,true,+1 375 628 9264,in/hollie-osei,Chicago,United States
+pe_428,co_155,Alex Wolf,Chief Operating Officer,C-Suite,Executive,alex.wolf@yarrowworks.edu,Verified,true,,in/alex-wolf,Bristol,United Kingdom
+pe_429,co_155,Lucia Tanaka,Practice Lead,Manager,Executive,lucia.tanaka@yarrowworks.edu,Verified,true,+1 867 226 3651,in/lucia-tanaka,Bristol,United Kingdom
+pe_430,co_155,Victor Tremblay,Managing Partner,C-Suite,Executive,victor.tremblay@yarrowworks.edu,Verified,true,,in/victor-tremblay,Bristol,United Kingdom
+pe_431,co_156,Hollie Ward,Director of Talent Development,C-Suite,Product & Eng,hollie.ward@ridgeshift.io,Verified,true,+1 228 459 8553,in/hollie-ward,Minneapolis,United States
+pe_432,co_156,Petra Price,Head of L&D,Head,People & L&D,petra.price@ridgeshift.io,Verified,true,,in/petra-price,Minneapolis,United States
+pe_433,co_156,Liam Berger,CHRO,C-Suite,People & L&D,liam.berger@ridgeshift.io,Verified,true,,in/liam-berger,Minneapolis,United States
+pe_434,co_156,Wei Bello,VP People,VP,People & L&D,wei.bello@ridgeshift.io,Verified,true,,in/wei-bello,Minneapolis,United States
+pe_435,co_157,Nina Okonkwo,Director of Business Development,C-Suite,Sales,nina.okonkwo@verdantlabs.com,Verified,true,+1 392 943 3329,in/nina-okonkwo,London,United Kingdom
+pe_436,co_157,Laura Berger,Managing Partner,C-Suite,Executive,laura.berger@verdantlabs.com,Verified,true,,in/laura-berger,London,United Kingdom
+pe_437,co_158,Nadia Nguyen,Chief Learning Officer,C-Suite,People & L&D,nadia.nguyen@tamarackspan.co,Verified,true,,in/nadia-nguyen,Vancouver,Canada
+pe_438,co_158,Omar Devlin,VP Sales,VP,Sales,omar.devlin@tamarackspan.co,Unverified,false,,in/omar-devlin,Vancouver,Canada
+pe_439,co_159,Nia Devlin,VP Academic,VP,Academic,nia.devlin@eastvalecollegeofa.com,Verified,true,,in/nia-devlin,Montreal,Canada
+pe_440,co_159,Petra Nguyen,Registrar,Director,Academic,petra.nguyen@eastvalecollegeofa.com,Verified,true,+1 342 579 1647,in/petra-nguyen,Montreal,Canada
+pe_441,co_159,Omar Kowalski,Director of Teaching & Learning,C-Suite,Product & Eng,omar.kowalski@eastvalecollegeofa.com,Verified,true,,in/omar-kowalski,Montreal,Canada
+pe_442,co_160,Olivia Visser,Head of Security Engineering,Head,Product & Eng,olivia.visser@driftforge.ca,Verified,true,+1 849 812 3799,in/olivia-visser,Ottawa,Canada
+pe_443,co_160,Simone Visser,CISO,C-Suite,Executive,simone.visser@driftforge.ca,Verified,true,+1 936 596 7158,in/simone-visser,Ottawa,Canada
+pe_444,co_160,Sam Rivera,VP Sales,VP,Sales,sam.rivera@driftforge.ca,Verified,true,,in/sam-rivera,Ottawa,Canada
+pe_445,co_161,Sofia Zhao,Director of Business Development,C-Suite,Sales,sofia.zhao@graniteworks.ca,Verified,true,,in/sofia-zhao,Miami,United States
+pe_446,co_161,Patrick Holm,Practice Lead,Manager,Executive,patrick.holm@graniteworks.ca,Verified,true,,in/patrick-holm,Miami,United States
+pe_447,co_162,Freja Sorensen,Managing Partner,C-Suite,Executive,freja.sorensen@tamarackpeak.edu,Unverified,false,,in/freja-sorensen,Glasgow,United Kingdom
+pe_448,co_162,Josephine Rivera,Chief Operating Officer,C-Suite,Executive,josephine.rivera@tamarackpeak.edu,Verified,true,,in/josephine-rivera,Glasgow,United Kingdom
+pe_449,co_162,Jordan Aziz,Practice Lead,Manager,Executive,jordan.aziz@tamarackpeak.edu,Verified,true,,in/jordan-aziz,Glasgow,United Kingdom
+pe_450,co_163,Camille Blake,Head of Product,Head,Product & Eng,camille.blake@summitlabs.co,Verified,true,+1 947 885 9286,in/camille-blake,Victoria,Canada
+pe_451,co_163,Klaus Turner,CEO,C-Suite,Executive,klaus.turner@summitlabs.co,Unverified,false,,in/klaus-turner,Victoria,Canada
+pe_452,co_163,Olivia Kim,VP Sales,VP,Sales,olivia.kim@summitlabs.co,Verified,true,+1 294 609 3294,in/olivia-kim,Victoria,Canada
+pe_453,co_164,Sam Bergeron,Head of Product,Head,Product & Eng,sam.bergeron@arborbridge.ca,Verified,true,,in/sam-bergeron,Chicago,United States
+pe_454,co_164,Rosa Fernandez,Chief Learning Officer,C-Suite,People & L&D,rosa.fernandez@arborbridge.ca,Catch-all,false,,in/rosa-fernandez,Chicago,United States
+pe_455,co_164,Leah Rahman,Director of Partnerships,C-Suite,Sales,leah.rahman@arborbridge.ca,Verified,true,+1 759 899 4446,in/leah-rahman,Chicago,United States
+pe_456,co_165,Mia Blake,Head of Product,Head,Product & Eng,mia.blake@cardinalmark.edu,Verified,true,,in/mia-blake,Miami,United States
+pe_457,co_165,Chinwe Mbeki,CEO,C-Suite,Executive,chinwe.mbeki@cardinalmark.edu,Catch-all,false,,in/chinwe-mbeki,Miami,United States
+pe_458,co_166,Sam Petrov,Founder,C-Suite,Executive,sam.petrov@crestshift.org,Verified,true,,in/sam-petrov,Toronto,Canada
+pe_459,co_166,Yusuf Lindqvist,New Business Director,C-Suite,Product & Eng,yusuf.lindqvist@crestshift.org,Verified,true,+1 215 583 6561,in/yusuf-lindqvist,Toronto,Canada
+pe_460,co_166,Laura Brown,Managing Director,C-Suite,Product & Eng,laura.brown@crestshift.org,Verified,true,,in/laura-brown,Toronto,Canada
+pe_461,co_167,Tanya Ward,VP People,VP,People & L&D,tanya.ward@ironbridge.io,Verified,true,,in/tanya-ward,Ottawa,Canada
+pe_462,co_167,Leah Clarke,Director of Talent Development,C-Suite,Product & Eng,leah.clarke@ironbridge.io,Unverified,false,,in/leah-clarke,Ottawa,Canada
+pe_463,co_167,Ahmed Bello,CHRO,C-Suite,People & L&D,ahmed.bello@ironbridge.io,Verified,true,,in/ahmed-bello,Ottawa,Canada
+pe_464,co_167,Chinwe Sorensen,Head of L&D,Head,People & L&D,chinwe.sorensen@ironbridge.io,Verified,true,,in/chinwe-sorensen,Ottawa,Canada
+pe_465,co_168,Nia Lim,VP Sales,VP,Sales,nia.lim@verdantbridge.io,Verified,true,+1 288 352 1558,in/nia-lim,Chicago,United States
+pe_466,co_169,Marcus Walker,AVP Innovation,VP,Executive,marcus.walker@ashcombecollege.org,Verified,true,,in/marcus-walker,Dublin,Ireland
+pe_467,co_169,Ruby Bauer,VP Academic,VP,Academic,ruby.bauer@ashcombecollege.org,Verified,true,,in/ruby-bauer,Dublin,Ireland
+pe_468,co_169,Olivia Mbeki,Registrar,Director,Academic,olivia.mbeki@ashcombecollege.org,Verified,true,,in/olivia-mbeki,Dublin,Ireland
+pe_469,co_170,Ruby Ali,New Business Director,C-Suite,Product & Eng,ruby.ali@onyxworks.ca,Unverified,false,,in/ruby-ali,San Francisco,United States
+pe_470,co_170,Simone Turner,Head of Growth,Head,Sales,simone.turner@onyxworks.ca,Verified,true,+1 436 267 1002,in/simone-turner,San Francisco,United States
+pe_471,co_170,Emily Roberts,Founder,C-Suite,Executive,emily.roberts@onyxworks.ca,Verified,true,,in/emily-roberts,San Francisco,United States
+pe_472,co_171,Yusuf Lim,Chief Learning Officer,C-Suite,People & L&D,yusuf.lim@riverpath.com,Catch-all,false,,in/yusuf-lim,Boston,United States
+pe_473,co_171,Renee Farouk,Head of Product,Head,Product & Eng,renee.farouk@riverpath.com,Verified,true,,in/renee-farouk,Boston,United States
+pe_474,co_171,Ella Patel,VP Sales,VP,Sales,ella.patel@riverpath.com,Verified,true,+1 426 824 5518,in/ella-patel,Boston,United States
+pe_475,co_172,Omar Wolf,Chief Compliance Officer,C-Suite,Executive,omar.wolf@harbourgrove.ca,Verified,true,,in/omar-wolf,Boston,United States
+pe_476,co_172,Chris Aziz,CFO,C-Suite,Executive,chris.aziz@harbourgrove.ca,Verified,true,,in/chris-aziz,Boston,United States
+pe_477,co_173,Sam Sorensen,Director of Talent Development,C-Suite,Product & Eng,sam.sorensen@kestrelcore.co,Catch-all,false,,in/sam-sorensen,Oshawa,Canada
+pe_478,co_173,Patrick Hall,CHRO,C-Suite,People & L&D,patrick.hall@kestrelcore.co,Verified,true,,in/patrick-hall,Oshawa,Canada
+pe_479,co_173,Rachel Laurent,VP People,VP,People & L&D,rachel.laurent@kestrelcore.co,Verified,true,,in/rachel-laurent,Oshawa,Canada
+pe_480,co_173,Ruby Novak,Head of L&D,Head,People & L&D,ruby.novak@kestrelcore.co,Verified,true,+1 428 655 3593,in/ruby-novak,Oshawa,Canada
+pe_481,co_174,Noah Fernandez,AVP Innovation,VP,Executive,noah.fernandez@elmwoodcollege.co,Verified,true,,in/noah-fernandez,Chicago,United States
+pe_482,co_174,Ingrid Bello,Director of Teaching & Learning,C-Suite,Product & Eng,ingrid.bello@elmwoodcollege.co,Unverified,false,,in/ingrid-bello,Chicago,United States
+pe_483,co_174,Alex Whitfield,Dean of Students,Director,Academic,alex.whitfield@elmwoodcollege.co,Verified,true,+1 489 916 3593,in/alex-whitfield,Chicago,United States
+pe_484,co_174,Petra Roberts,Registrar,Director,Academic,petra.roberts@elmwoodcollege.co,Verified,true,+1 752 537 9756,in/petra-roberts,Chicago,United States
+pe_485,co_175,Simone Mendes,Director of Teaching & Learning,C-Suite,Product & Eng,simone.mendes@kingswaycollege.ca,Verified,true,+1 914 941 7127,in/simone-mendes,Philadelphia,United States
+pe_486,co_175,Laura Holm,Dean of Students,Director,Academic,laura.holm@kingswaycollege.ca,Verified,true,+1 401 896 4176,in/laura-holm,Philadelphia,United States
+pe_487,co_175,Carlos Farouk,Director of Continuing Education,C-Suite,Product & Eng,carlos.farouk@kingswaycollege.ca,Verified,true,,in/carlos-farouk,Philadelphia,United States
+pe_488,co_176,Olivia Okafor,Founder,C-Suite,Executive,olivia.okafor@anchorforge.edu,Verified,true,+1 405 668 2295,in/olivia-okafor,Dublin,Ireland
+pe_489,co_176,Alex Moreno,Head of Growth,Head,Sales,alex.moreno@anchorforge.edu,Verified,true,+1 369 218 4686,in/alex-moreno,Dublin,Ireland
+pe_490,co_176,Mia Grant,New Business Director,C-Suite,Product & Eng,mia.grant@anchorforge.edu,Verified,true,,in/mia-grant,Dublin,Ireland
+pe_491,co_177,Carlos Wilson,Chief Operating Officer,C-Suite,Executive,carlos.wilson@granitelabs.org,Catch-all,false,,in/carlos-wilson,Dublin,Ireland
+pe_492,co_178,Carlos Reyes,Founder,C-Suite,Executive,carlos.reyes@umbraloop.co,Verified,true,+1 980 971 2382,in/carlos-reyes,Manchester,United Kingdom
+pe_493,co_178,Sean Errington,Head of Growth,Head,Sales,sean.errington@umbraloop.co,Verified,true,,in/sean-errington,Manchester,United Kingdom
+pe_494,co_179,Victor Diaz,VP Academic,VP,Academic,victor.diaz@ashforduniversity.co,Verified,true,+1 596 591 6374,in/victor-diaz,New York,United States
+pe_495,co_179,Emily Sorensen,Director of Continuing Education,C-Suite,Product & Eng,emily.sorensen@ashforduniversity.co,Verified,true,,in/emily-sorensen,New York,United States
+pe_496,co_179,Marcus Fraser,Registrar,Director,Academic,marcus.fraser@ashforduniversity.co,Verified,true,+1 450 243 4637,in/marcus-fraser,New York,United States
+pe_497,co_180,Lena Farouk,VP Sales,VP,Sales,lena.farouk@yarrowmark.ca,Verified,true,+1 800 552 7860,in/lena-farouk,New York,United States
+pe_498,co_180,Marc Sorensen,Head of Product,Head,Product & Eng,marc.sorensen@yarrowmark.ca,Verified,true,+1 563 593 1586,in/marc-sorensen,New York,United States
+pe_499,co_181,Noah Murphy,Dean of Students,Director,Academic,noah.murphy@ravenscourtcollege.edu,Verified,true,,in/noah-murphy,New York,United States
+pe_500,co_181,Josephine Berger,AVP Innovation,VP,Executive,josephine.berger@ravenscourtcollege.edu,Verified,true,+1 725 640 8574,in/josephine-berger,New York,United States
+pe_501,co_181,Laura Ali,Director of Teaching & Learning,C-Suite,Product & Eng,laura.ali@ravenscourtcollege.edu,Verified,true,,in/laura-ali,New York,United States
+pe_502,co_181,Darius Hall,Registrar,Director,Academic,darius.hall@ravenscourtcollege.edu,Verified,true,,in/darius-hall,New York,United States
+pe_503,co_182,Renee Kim,CEO,C-Suite,Executive,renee.kim@mapleline.io,Verified,true,,in/renee-kim,Ottawa,Canada
+pe_504,co_182,Nia Tanaka,VP Sales,VP,Sales,nia.tanaka@mapleline.io,Unverified,false,,in/nia-tanaka,Ottawa,Canada
+pe_505,co_183,Darius Shah,Head of Growth,Head,Sales,darius.shah@brightmark.org,Verified,true,,in/darius-shah,Dublin,Ireland
+pe_506,co_183,Malik Rossi,VP Sales,VP,Sales,malik.rossi@brightmark.org,Verified,true,+1 266 363 2479,in/malik-rossi,Dublin,Ireland
+pe_507,co_183,Malik Kowalski,CEO,C-Suite,Executive,malik.kowalski@brightmark.org,Verified,true,+1 523 862 8306,in/malik-kowalski,Dublin,Ireland
+pe_508,co_184,Gabriel Fernandez,CEO,C-Suite,Executive,gabriel.fernandez@kestrelline.org,Unverified,false,,in/gabriel-fernandez,Bristol,United Kingdom
+pe_509,co_185,Lucia Tremblay,Director of Demand Gen,C-Suite,Sales,lucia.tremblay@cedarlabs.io,Verified,true,+1 859 590 5271,in/lucia-tremblay,New York,United States
+pe_510,co_185,Priya Wilson,VP Sales,VP,Sales,priya.wilson@cedarlabs.io,Verified,true,,in/priya-wilson,New York,United States
+pe_511,co_185,Priya Wolf,CTO,C-Suite,Product & Eng,priya.wolf@cedarlabs.io,Verified,true,,in/priya-wolf,New York,United States
+pe_512,co_185,Chris Tremblay,CEO,C-Suite,Executive,chris.tremblay@cedarlabs.io,Unverified,false,,in/chris-tremblay,New York,United States
+pe_513,co_186,Darius Clarke,Director of Programs,C-Suite,Product & Eng,darius.clarke@verdantshift.ca,Verified,true,+1 500 407 3039,in/darius-clarke,Amsterdam,Netherlands
+pe_514,co_186,Ingrid Andersson,Executive Director,C-Suite,Product & Eng,ingrid.andersson@verdantshift.ca,Verified,true,+1 949 209 8650,in/ingrid-andersson,Amsterdam,Netherlands
