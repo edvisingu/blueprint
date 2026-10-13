@@ -598,7 +598,41 @@ function mkMailbox(db, orgId, over) {
       JSON.stringify(cs));
   }
 
-  // ============================ 18. purge removes demo data (runs LAST:
+
+  // ============================== 18. a draft is not a delivery
+  section("Draft mode — a draft reaches nobody and must not count as sent");
+  {
+    const orgId = freshOrg(db, { armed: true });
+    // A fake draft transport standing in for gmail-draft, so the accounting
+    // is tested without needing Google credentials.
+    sending.registerTransport("faux-draft", {
+      send: () => ({ ok: true, id: "draft_1", draft: true, delivered: false }),
+    });
+    const mb = mkMailbox(db, orgId, { provider: "faux-draft", daily_cap: 3, min_gap_seconds: 0 });
+    const co = mkCompany(db, "import");
+    const made = [];
+    for (let i = 0; i < 6; i++) {
+      const c = mkContact(db, co, "import", "dr" + i + "@draftco.example");
+      grantConsent(db, orgId, c, "express");
+      made.push(sending.send(db, orgId, { contactId: c, subject: "s", body: "b" }));
+    }
+    ok("drafts are recorded as DRAFTED, not SENT",
+      made.every((r) => r.state === "DRAFTED"), made.map((r) => r.state).join(","));
+    ok("no row claims to have been SENT",
+      db.prepare("SELECT COUNT(*) n FROM sends WHERE mailbox_id=? AND state='SENT'").get(mb).n === 0);
+    // The crucial accounting property: drafting does not burn the daily cap,
+    // because nothing was delivered. All 6 drafted despite a cap of 3.
+    ok("drafting does not consume the daily cap", sending.countSentToday(db, mb) === 0,
+      "countSentToday=" + sending.countSentToday(db, mb));
+    ok("all 6 drafted even though the cap is 3",
+      db.prepare("SELECT COUNT(*) n FROM sends WHERE mailbox_id=? AND state='DRAFTED'").get(mb).n === 6);
+    const r = sending.rates(db, mb);
+    ok("drafts are excluded from rate denominators", r.sent === 0, "sent=" + r.sent);
+    ok("a draft still carries the full body with footer and unsubscribe",
+      /Unsubscribe here: https:\/\//.test(db.prepare("SELECT body FROM sends WHERE id=?").get(made[0].id).body || ""));
+  }
+
+  // ============================ 19. purge removes demo data (runs LAST:
   // this section closes the database to exercise the standalone CLI path)
   section("Purge — demo data can be removed completely");
   {

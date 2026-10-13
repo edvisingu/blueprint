@@ -203,7 +203,10 @@ CREATE TABLE IF NOT EXISTS sends (
   contact_id TEXT NOT NULL REFERENCES contacts(id),
   mailbox_id TEXT REFERENCES mailboxes(id),
   step INTEGER NOT NULL DEFAULT 0,
-  -- QUEUED | SENT | SKIPPED | FAILED | BOUNCED | COMPLAINED | UNSUBSCRIBED
+  -- QUEUED | DRAFTED | SENT | SKIPPED | FAILED | BOUNCED | COMPLAINED | UNSUBSCRIBED
+  -- DRAFTED is deliberately distinct from SENT: a Gmail draft awaiting human
+  -- review has reached nobody, consumes no sending reputation, and must never
+  -- be counted as delivered mail.
   state TEXT NOT NULL DEFAULT 'QUEUED',
   -- Why a send did not happen. Never silent: every skip is a row.
   skip_reason TEXT,

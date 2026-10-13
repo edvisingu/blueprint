@@ -100,6 +100,8 @@ function countSentToday(db, mailboxId, now) {
   } catch (e) {
     dayStart = at - (at % DAY);
   }
+  // Only SENT counts against a cap. DRAFTED does not: a draft consumes no
+  // sending reputation and reaches nobody until a human sends it.
   return db
     .prepare("SELECT COUNT(*) n FROM sends WHERE mailbox_id=? AND state='SENT' AND attempted_at >= ?")
     .get(mailboxId, dayStart).n;
@@ -253,6 +255,31 @@ function registerTransport(name, impl) {
   transports[name] = { name, ...impl };
 }
 
+/* Register the Gmail transports when Workspace credentials are present.
+ *
+ * Both modes are registered so a mailbox can choose per-mailbox: one brand can
+ * be drafting while another sends. Absent credentials, neither is registered
+ * and a mailbox configured for them falls back to dryrun, which the readiness
+ * gate reports rather than hiding.
+ *
+ * "gmail-draft" writes a Gmail draft and delivers nothing. For a first campaign
+ * that is the right posture — an accidental send becomes structurally
+ * impossible rather than merely against policy.
+ */
+function registerGmail() {
+  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) return [];
+  let gmail;
+  try { gmail = require("./transports/gmail.js"); } catch (e) { return []; }
+  const registered = [];
+  for (const mode of ["draft", "send"]) {
+    const t = gmail.createTransport({ mode });
+    registerTransport("gmail-" + mode, t);
+    registered.push("gmail-" + mode);
+  }
+  return registered;
+}
+registerGmail();
+
 // ----------------------------------------------------------------- queue
 /* Decide, for one contact in one campaign, whether a send may happen now.
  * Returns {allow:true, mailbox} or {allow:false, reason, detail}.
@@ -352,10 +379,16 @@ function send(db, orgId, { contactId, campaignId, step, subject, body, brandId }
   }
 
   if (res && res.ok) {
-    db.prepare("UPDATE sends SET state='SENT', provider_message_id=?, settled_at=? WHERE id=?")
-      .run(res.id || null, Date.now(), sid);
-    enforceHealth(db, orgId, mb.id, at);
-    return { id: sid, state: "SENT", dryRun, mailbox: mb.address, messageId: res.id };
+    // A draft is NOT a delivery. It is recorded as DRAFTED so no dashboard,
+    // rate calculation or cap counts it as mail that went out: a drafted
+    // message that is never opened has reached nobody.
+    const drafted = res.draft === true;
+    const state = drafted ? "DRAFTED" : "SENT";
+    db.prepare("UPDATE sends SET state=?, provider_message_id=?, settled_at=? WHERE id=?")
+      .run(state, res.id || null, Date.now(), sid);
+    if (!drafted) enforceHealth(db, orgId, mb.id, at);
+    return { id: sid, state, dryRun, drafted, mailbox: mb.address, messageId: res.id,
+      threadId: res.threadId };
   }
   db.prepare("UPDATE sends SET state='FAILED', error=?, settled_at=? WHERE id=?")
     .run((res && res.error) || "unknown", Date.now(), sid);
@@ -404,7 +437,7 @@ function skipReport(db, orgId, sinceMs) {
 }
 
 module.exports = {
-  LIMITS, raise, openAlerts, countSentToday, lastSendAt, rates, enforceHealth,
+  LIMITS, registerGmail, raise, openAlerts, countSentToday, lastSendAt, rates, enforceHealth,
   unsubToken, unsubscribe, footer, unsubHeaders, transports, registerTransport,
   canSend, send, settle, skipReport,
 };
