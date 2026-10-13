@@ -30,6 +30,9 @@ window.DRD_WORKSPACE = (function () {
     { t: "Forwarding this to our AVP Innovation, he's leading the initiative." },
   ];
 
+  // Every ICP across every brand, so a campaign can reference any of them.
+  const ALL_ICPS = D.brands.reduce((a, b) => a.concat(b.icps), []);
+
   function build() {
     const rnd = mulberry32(777001);
     const pick = (a) => a[Math.floor(rnd() * a.length)];
@@ -43,13 +46,16 @@ window.DRD_WORKSPACE = (function () {
       { name: "Enterprise L&D — AI Upskilling", icp: "icp_3", goal: "Book a scoping call", tone: "executive", status: "Active", budget: 750, autopilot: false },
       { name: "US Universities — Pilot Expansion", icp: "icp_1", goal: "Book a pilot conversation", tone: "consultative", status: "Paused", budget: 400, autopilot: false },
       { name: "Professional Services — Warm Test", icp: "icp_4", goal: "Gauge interest in partner training", tone: "warm", status: "Draft", budget: 250, autopilot: false },
+      { name: "Youth Clubs — Site + Roster", brandId: "drdsports", icp: "sp_1", goal: "Book a 15-minute club walkthrough", tone: "direct", status: "Active", budget: 500, autopilot: true },
+      { name: "Coaches — Single Team Pilot", brandId: "drdsports", icp: "sp_6", goal: "Start one team on a pilot", tone: "warm", status: "Active", budget: 300, autopilot: false },
+      { name: "US High Schools — NIL Education", brandId: "drdsports", icp: "sp_3", goal: "Book an NIL briefing with the AD", tone: "consultative", status: "Draft", budget: 400, autopilot: false },
     ];
 
     const campaigns = [], conversations = [], meetings = [], activity = [];
     let convId = 1, meetId = 1;
 
     campaignDefs.forEach((def, ci) => {
-      const icp = D.icps.find((i) => i.id === def.icp);
+      const icp = ALL_ICPS.find((i) => i.id === def.icp);
       const pool = D.companies.filter((c) => c.industry === icp.industry && (!icp.country || c.country === icp.country) && (!icp.sizeMin || c.size >= icp.sizeMin));
       const chosen = pool.slice(0, def.status === "Draft" ? 14 : def.status === "Paused" ? 18 : 26);
       const leadIds = [];
@@ -61,7 +67,8 @@ window.DRD_WORKSPACE = (function () {
       const positive = Math.max(1, Math.round(replies * (0.32 + rnd() * 0.25)));
 
       const camp = {
-        id: "cmp_" + (ci + 1), name: def.name, icpId: def.icp, goal: def.goal, tone: def.tone,
+        id: "cmp_" + (ci + 1), brandId: def.brandId || "edvisingu",
+        name: def.name, icpId: def.icp, goal: def.goal, tone: def.tone,
         status: def.status, autopilot: def.autopilot, budget: def.budget,
         spend: isLive ? +(sent * 0.031).toFixed(2) : 0,
         leadIds, sent, replies, positive, hot: 0, meetings: 0,
@@ -83,7 +90,7 @@ window.DRD_WORKSPACE = (function () {
         const outbound = E.generateEmail(co, p, { tone: def.tone, goal: def.goal });
         const at = now - int(rnd, 1, 21) * DAY;
         const conv = {
-          id: "cnv_" + convId++, personId: pid, companyId: co.id, campaignId: camp.id,
+          id: "cnv_" + convId++, brandId: camp.brandId, personId: pid, companyId: co.id, campaignId: camp.id,
           subject: outbound.subject,
           messages: [
             { dir: "out", text: outbound.body, at: at - 2 * DAY },
@@ -99,7 +106,7 @@ window.DRD_WORKSPACE = (function () {
         // ---- meetings from meeting-intent replies --------------------
         if (cls.intent === "Meeting Request" || (cls.intent === "Interested" && rnd() > 0.55)) {
           meetings.push({
-            id: "mtg_" + meetId++, personId: pid, companyId: co.id, campaignId: camp.id,
+            id: "mtg_" + meetId++, brandId: camp.brandId, personId: pid, companyId: co.id, campaignId: camp.id,
             at: now + int(rnd, -6, 16) * DAY,
             duration: 30,
             status: rnd() > 0.75 ? "Completed" : "Confirmed",
@@ -164,6 +171,8 @@ window.DRD_WORKSPACE = (function () {
 
     return {
       version: 1,
+      activeBrand: "drdverse",
+      brands: JSON.parse(JSON.stringify(D.brands)),
       profile: D.businessProfile,
       icps: JSON.parse(JSON.stringify(D.icps)),
       campaigns, conversations, meetings, suppressions,

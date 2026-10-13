@@ -53,6 +53,19 @@
   }
   function scoreCls(n) { return n >= 82 ? "hi" : n >= 62 ? "mid" : "lo"; }
 
+  // ---- brand scoping ----------------------------------------------------
+  // Pipeline views show only the active brand. The portfolio brand (DRDverse)
+  // is a roll-up, so it deliberately sees every brand at once.
+  function brand() { return ws.brands.find((b) => b.id === ws.activeBrand) || ws.brands[0]; }
+  function isRollup() { return brand().role === "portfolio"; }
+  function bIcps() { return brand().icps || []; }
+  function allIcps() { return ws.brands.reduce((a, b) => a.concat(b.icps || []), []); }
+  const inBrand = (x) => isRollup() || x.brandId === ws.activeBrand;
+  function camps() { return ws.campaigns.filter(inBrand); }
+  function convos() { return ws.conversations.filter(inBrand); }
+  function meets() { return ws.meetings.filter(inBrand); }
+  function brandOf(id) { return ws.brands.find((b) => b.id === id) || { name: id, icps: [] }; }
+
   // CSV export — uses the hosted downloads capability, falls back to a blob.
   async function exportCSV(filename, rows) {
     const csv = rows.map((r) => r.map((v) => {
@@ -89,8 +102,8 @@
     { id: "segments", ic: "◈", t: "Segments" },
     { g: "Engagement" },
     { id: "campaigns", ic: "▶", t: "Campaigns" },
-    { id: "inbox", ic: "✉", t: "Inbox", badge: () => ws.conversations.filter((c) => c.status === "Need Reply").length },
-    { id: "hot", ic: "★", t: "Hot Leads", badge: () => ws.conversations.filter((c) => c.hot).length },
+    { id: "inbox", ic: "✉", t: "Inbox", badge: () => convos().filter((c) => c.status === "Need Reply").length },
+    { id: "hot", ic: "★", t: "Hot Leads", badge: () => convos().filter((c) => c.hot).length },
     { id: "meetings", ic: "◷", t: "Meetings" },
     { g: "Operations" },
     { id: "analytics", ic: "▤", t: "Analytics" },
@@ -100,7 +113,31 @@
     { id: "settings", ic: "⚙", t: "Settings" },
   ];
 
+  function renderBrandSwitch() {
+    const el = $("#brandswitch");
+    if (!el) return;
+    const b = brand();
+    el.innerHTML =
+      "<label>Brand</label>" +
+      '<select id="brandsel">' +
+        ws.brands.map((x) =>
+          '<option value="' + x.id + '" ' + (x.id === ws.activeBrand ? "selected" : "") + ">" +
+          esc(x.name) + "</option>").join("") +
+      "</select>" +
+      '<div class="fitline"><b>' + esc(b.fit) + "</b> fit for outbound \u00b7 " + esc(b.domain) + "</div>";
+    $("#brandsel").onchange = (e) => {
+      ws.activeBrand = e.target.value;
+      state.inbox.active = null;
+      state.company.results = null; state.person.results = null;
+      save();
+      toast("Switched to " + brand().name);
+      renderBrandSwitch();
+      go(isRollup() && state.view !== "overview" ? "overview" : state.view);
+    };
+  }
+
   function renderNav() {
+    renderBrandSwitch();
     $("#nav").innerHTML = NAV.map((n) => {
       if (n.g) return '<div class="group">' + esc(n.g) + "</div>";
       const b = n.badge ? n.badge() : 0;
@@ -135,24 +172,47 @@
 
   // ---------------------------------------------------------- OVERVIEW
   VIEWS.overview = function () {
-    const a = E.analytics(ws);
-    const hot = ws.conversations.filter((c) => c.hot).slice(0, 5);
-    const upcoming = ws.meetings.filter((m) => m.at > Date.now()).sort((x, y) => x.at - y.at).slice(0, 4);
-    const companiesFound = ws.campaigns.reduce((s, c) => s + new Set(c.leadIds.map((id) => (E.personById(id) || {}).companyId)).size, 0);
+    const a = E.analytics({ campaigns: camps() });
+    const hot = convos().filter((c) => c.hot).slice(0, 5);
+    const upcoming = meets().filter((m) => m.at > Date.now()).sort((x, y) => x.at - y.at).slice(0, 4);
+    const companiesFound = camps().reduce((s, c) => s + new Set(c.leadIds.map((id) => (E.personById(id) || {}).companyId)).size, 0);
+
+    const rollup = isRollup() ? '<div class="card" style="margin-bottom:16px">' +
+      '<div class="card-h"><h3>Across every brand</h3><span class="grow"></span>' +
+      '<span style="font-size:12px;color:var(--faint)">DRDverse is the roll-up, not a pipeline</span></div>' +
+      '<div class="tbl-wrap" style="border:none;border-radius:0"><table class="tbl"><thead><tr>' +
+      '<th>Brand</th><th>Outbound fit</th><th class="right">ICPs</th><th class="right">Campaigns</th>' +
+      '<th class="right">Sent</th><th class="right">Replies</th><th class="right">Hot</th><th class="right">Meetings</th>' +
+      "</tr></thead><tbody>" +
+      ws.brands.filter((b) => b.role !== "portfolio").map((b) => {
+        const cs = ws.campaigns.filter((c) => c.brandId === b.id);
+        const cv = ws.conversations.filter((c) => c.brandId === b.id);
+        const mt = ws.meetings.filter((m) => m.brandId === b.id);
+        return '<tr data-gobrand="' + b.id + '">' +
+          '<td><div class="prime">' + esc(b.name) + '</div><div class="sub">' + esc(b.tagline) + "</div></td>" +
+          '<td><span class="pill ' + (b.fit === "Strong" ? "good" : b.fit === "Partial" ? "warn" : "muted") + '">' + esc(b.fit) + "</span></td>" +
+          '<td class="right num">' + (b.icps || []).length + "</td>" +
+          '<td class="right num">' + cs.length + "</td>" +
+          '<td class="right num">' + num(cs.reduce((a, c) => a + c.sent, 0)) + "</td>" +
+          '<td class="right num">' + num(cv.length) + "</td>" +
+          '<td class="right num">' + num(cv.filter((c) => c.hot).length) + "</td>" +
+          '<td class="right num">' + num(mt.length) + "</td></tr>";
+      }).join("") + "</tbody></table></div></div>" : "";
 
     return '<div class="page-head"><div>' +
-      "<h2>Your AI sales department, at a glance</h2>" +
+      "<h2>" + (isRollup() ? "Every brand, at a glance" : esc(brand().name) + " \u00b7 at a glance") + "</h2>" +
       "<p>What the agent did, who replied, who is hot, and what it is learning.</p>" +
       '</div><div class="head-actions">' +
       '<button class="btn ghost" data-act="run-agent">✦ Run agent cycle</button>' +
       '<button class="btn" data-nav2="campaigns">View campaigns</button></div></div>' +
 
+      rollup +
       '<div class="stats">' +
       tile("Companies found", num(companiesFound), "across active ICPs") +
       tile("People contacted", num(a.sent), "personalized sends") +
       tile("Replies", num(a.replies), a.replyRate + "% reply rate") +
-      tile("Hot leads", num(ws.conversations.filter((c) => c.hot).length), "meaningful interest", true) +
-      tile("Meetings booked", num(ws.meetings.length), "confirmed + completed") +
+      tile("Hot leads", num(convos().filter((c) => c.hot).length), "meaningful interest", true) +
+      tile("Meetings booked", num(meets().length), "confirmed + completed") +
       tile("Spend", money(a.spend), a.costPerMeeting ? money(a.costPerMeeting) + " / meeting" : "—") +
       "</div>" +
 
@@ -207,6 +267,11 @@
   }
   WIRE.overview = function () {
     $$("[data-nav2]").forEach((b) => (b.onclick = () => go(b.dataset.nav2)));
+    $$("[data-gobrand]").forEach((tr) => (tr.onclick = () => {
+      ws.activeBrand = tr.dataset.gobrand;
+      state.inbox.active = null; state.company.results = null; state.person.results = null;
+      save(); renderBrandSwitch(); toast("Switched to " + brand().name); go("overview");
+    }));
     const r = $("[data-act='run-agent']"); if (r) r.onclick = runAgentCycle;
   };
 
@@ -234,9 +299,9 @@
       const s = steps[i++];
       ws.activity.unshift({ state: s[0], text: s[1], at: Date.now() });
       ws.activity = ws.activity.slice(0, 40);
-      const cnt = ws.campaigns.filter((c) => c.status === "Active").length;
+      const cnt = camps().filter((c) => c.status === "Active").length;
       if (s[0] === "SENDING" && cnt) {
-        ws.campaigns.filter((c) => c.status === "Active").forEach((c) => { c.sent += 6; c.spend = +(c.spend + 6 * ws.credits.emailRate).toFixed(2); });
+        camps().filter((c) => c.status === "Active").forEach((c) => { c.sent += 6; c.spend = +(c.spend + 6 * ws.credits.emailRate).toFixed(2); });
         ws.credits.used += 6 * cnt;
       }
       save();
@@ -248,11 +313,33 @@
 
   // ------------------------------------------------------------- AGENT
   VIEWS.agent = function () {
-    const p = ws.profile;
+    const b = brand();
+    const p = b.profile;
     return '<div class="page-head"><div><h2>AI Agent</h2>' +
       "<p>What the agent understands about your business, the markets it selected, and how much control it has.</p></div>" +
       '<div class="head-actions"><button class="btn ghost" data-act="reanalyze">↻ Re-analyze website</button>' +
       '<button class="btn" data-act="run-agent">✦ Run agent cycle</button></div></div>' +
+
+      '<div class="brandcard">' +
+        '<div class="rowflex" style="justify-content:space-between;align-items:flex-start">' +
+          "<div><h3>" + esc(b.name) + '</h3><div class="dom">' + esc(b.domain) + "</div></div>" +
+          '<span class="pill ' + (b.fit === "Strong" ? "good" : b.fit === "Partial" ? "warn" : "muted") + '">' +
+          esc(b.fit) + " fit</span></div>" +
+        '<div class="note">' + esc(b.note || "") + "</div>" +
+        (b.productLines ? '<div class="pl">' + b.productLines.map((x) =>
+          '<div class="it"><div class="rowflex" style="justify-content:space-between">' +
+          "<h4>" + esc(x.name) + '</h4><span class="pill ' + (x.motion === "outbound" ? "gold" : "muted") + '">' +
+          esc(x.motion) + "</span></div><p>" + esc(x.what) + "<br><span style=\"color:var(--faint)\">Buyer: " +
+          esc(x.buyers) + "</span></p></div>").join("") + "</div>" : "") +
+        (b.buyerTypes ? '<div class="sec buyers" style="margin-top:16px;margin-bottom:0">' +
+          '<span class="label">Who purchases, and how we reach them</span>' +
+          b.buyerTypes.map((t) =>
+            '<div class="row2"><div class="who">' + esc(t.who) +
+            (t.product ? '<div style="font-size:11px;color:var(--faint);font-weight:500">' + esc(t.product) + "</div>" : "") +
+            '</div><div class="how">' + esc(t.buys) + '<div style="color:var(--faint);margin-top:3px">' + esc(t.reach) + "</div></div>" +
+            '<span class="pill ' + (t.motion === "outbound" ? "gold" : "muted") + '">' + esc(t.motion) + "</span></div>").join("") +
+          "</div>" : "") +
+      "</div>" +
 
       '<div class="card pad" style="margin-bottom:16px">' +
         '<div class="rowflex" style="justify-content:space-between">' +
@@ -283,10 +370,18 @@
           "</div></div></div>" +
       "</div>" +
 
+      '<div class="card pad" style="margin-top:16px">' +
+        '<div class="label" style="margin-bottom:8px">Describe who you are looking for</div>' +
+        '<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Plain language. It becomes a stored ICP for ' +
+        esc(b.name) + ', and the criteria it extracts drive search.</div>' +
+        '<div class="searchbar" style="margin-bottom:0"><span class="ic">\u2726</span>' +
+        '<input id="icpdesc" placeholder="e.g. youth hockey clubs in Ontario with more than 20 staff" />' +
+        '<button class="btn" id="icpadd">Add ICP</button></div></div>' +
+
       '<div class="card" style="margin-top:16px"><div class="card-h"><h3>ICP hypotheses</h3>' +
-        '<span class="grow"></span><span style="font-size:12px;color:var(--faint)">' + ws.icps.filter((i) => i.approved).length + " of " + ws.icps.length + " approved</span></div>" +
+        '<span class="grow"></span><span style="font-size:12px;color:var(--faint)">' + bIcps().filter((i) => i.approved).length + " of " + bIcps().length + " approved</span></div>" +
         '<div class="card-b stack">' +
-          ws.icps.map((i) =>
+          bIcps().map((i) =>
             '<div class="icp-card ' + (i.approved ? "on" : "") + '"><div>' +
               '<div class="rowflex"><h4>' + esc(i.name) + '</h4><span class="pill ' + (i.fit >= 85 ? "gold" : "muted") + '">Fit ' + i.fit + "</span></div>" +
               '<div class="why">' + esc(i.why) + "</div>" +
@@ -303,16 +398,48 @@
     $("#autopilot").onchange = (e) => { ws.autopilot = e.target.checked; save(); wt(function () { return WS.push.autopilot(ws.autopilot); }); audit("autopilot", ws.autopilot ? "enabled" : "disabled"); toast("Autopilot " + (ws.autopilot ? "on" : "off")); go("agent"); };
     const r = $("[data-act='run-agent']"); if (r) r.onclick = runAgentCycle;
     const ra = $("[data-act='reanalyze']"); if (ra) ra.onclick = () => {
-      ws.activity.unshift({ state: "ANALYZING", text: "Re-analyzed " + ws.profile.website + " and refreshed the business profile.", at: Date.now() });
+      ws.activity.unshift({ state: "ANALYZING", text: "Re-analyzed " + brand().profile.website + " and refreshed the business profile.", at: Date.now() });
       save(); toast("Website re-analyzed"); go("agent");
     };
+    const ia = $("#icpadd"), idesc = $("#icpdesc");
+    if (ia) {
+      const addIcp = () => {
+        const text = idesc.value.trim();
+        if (!text) { toast("Describe the target first"); return; }
+        const c = E.parseQuery(text);
+        const b2 = brand();
+        const icp = {
+          id: "icp_" + Date.now().toString(36),
+          name: text.length > 52 ? text.slice(0, 52) + "\u2026" : text,
+          fit: Math.min(95, 62 + c.industries.length * 9 + (c.country ? 6 : 0) + (c.sizeMin || c.sizeMax ? 5 : 0)),
+          industry: c.industries[0] || (b2.industries || [])[0] || null,
+          country: c.country === "__EUROPE__" ? null : c.country,
+          sizeMin: c.sizeMin, approved: true,
+          why: "Added from your description. Parsed: " +
+            ([c.industries.length ? "industry " + c.industries.join(", ") : "",
+              c.country && c.country !== "__EUROPE__" ? "country " + c.country : "",
+              c.sizeMin ? "min size " + c.sizeMin : "",
+              c.sizeMax ? "max size " + c.sizeMax : "",
+              c.seniority.length ? "seniority " + c.seniority.join(", ") : ""]
+              .filter(Boolean).join(" \u00b7 ") || "no structured criteria, keywords only"),
+          buyers: c.seniority.length ? c.seniority : ["Decision maker"],
+        };
+        b2.icps.push(icp);
+        save(); audit("icp.created", b2.name + ": " + icp.name);
+        toast("ICP added to " + b2.name);
+        go("agent");
+      };
+      ia.onclick = addIcp;
+      idesc.addEventListener("keydown", (e) => { if (e.key === "Enter") addIcp(); });
+    }
+
     $$("[data-icp]").forEach((b) => (b.onclick = () => {
-      const i = ws.icps.find((x) => x.id === b.dataset.icp);
+      const i = bIcps().find((x) => x.id === b.dataset.icp);
       i.approved = !i.approved; save(); wt(function () { return WS.push.icp(i.id, i.approved); }); audit("icp." + (i.approved ? "approved" : "rejected"), i.name);
       toast(i.name + (i.approved ? " approved" : " rejected")); go("agent");
     }));
     $$("[data-icpsearch]").forEach((b) => (b.onclick = () => {
-      const i = ws.icps.find((x) => x.id === b.dataset.icpsearch);
+      const i = bIcps().find((x) => x.id === b.dataset.icpsearch);
       const q = [i.industry, i.country ? "in " + i.country : "", i.sizeMin ? "over " + i.sizeMin + " employees" : ""].filter(Boolean).join(" ");
       state.company.query = q; state.company.results = null;
       go("companies"); setTimeout(() => runCompanySearch(q, i), 30);
@@ -416,7 +543,7 @@
   function addSelectedToCampaign() {
     const ids = Array.from(state.company.sel);
     if (!ids.length) { toast("Select companies first"); return; }
-    const target = ws.campaigns.find((c) => c.status === "Draft") || ws.campaigns[0];
+    const target = camps().find((c) => c.status === "Draft") || camps()[0];
     let added = 0;
     ids.forEach((cid) => (D.peopleByCompany[cid] || []).slice(0, 2).forEach((p) => {
       if (!target.leadIds.includes(p.id)) { target.leadIds.push(p.id); added++; }
@@ -522,7 +649,7 @@
       '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Campaign</th><th>Status</th><th class="right">Leads</th>' +
       '<th class="right">Sent</th><th class="right">Replies</th><th class="right">Hot</th><th class="right">Meetings</th>' +
       '<th class="right">Spend</th><th>Autopilot</th></tr></thead><tbody>' +
-      ws.campaigns.map((c) =>
+      camps().map((c) =>
         '<tr data-camp="' + c.id + '">' +
         '<td><div class="prime">' + esc(c.name) + '</div><div class="sub">' + esc(c.goal) + "</div></td>" +
         '<td><span class="pill ' + (c.status === "Active" ? "good" : c.status === "Paused" ? "warn" : "muted") + '">' + esc(c.status) + "</span></td>" +
@@ -538,9 +665,9 @@
   WIRE.campaigns = function () {
     $$("[data-camp]").forEach((tr) => (tr.onclick = () => openCampaign(tr.dataset.camp)));
     $("[data-act='new-camp']").onclick = () => {
-      const approved = ws.icps.filter((i) => i.approved);
-      const icp = approved[0] || ws.icps[0];
-      const c = { id: "cmp_" + (ws.campaigns.length + 1) + "_" + Date.now().toString(36),
+      const approved = bIcps().filter((i) => i.approved);
+      const icp = approved[0] || bIcps()[0];
+      const c = { id: "cmp_" + (ws.campaigns.length + 1) + "_" + Date.now().toString(36), brandId: ws.activeBrand,
         name: icp.name + " — new campaign", icpId: icp.id, goal: "Book a short call", tone: "consultative",
         status: "Draft", autopilot: false, budget: 300, spend: 0, leadIds: [], sent: 0, replies: 0, positive: 0, hot: 0, meetings: 0,
         createdAt: Date.now(), sequence: [{ step: 1, day: 0, label: "Personalized opener" }, { step: 2, day: 3, label: "Follow-up" }, { step: 3, day: 8, label: "Close the loop" }] };
@@ -580,7 +707,7 @@
   }
 
   function inboxList() {
-    let l = ws.conversations.slice().sort((a, b) => b.at - a.at);
+    let l = convos().slice().sort((a, b) => b.at - a.at);
     if (state.inbox.filter === "Need Reply") l = l.filter((c) => c.status === "Need Reply");
     if (state.inbox.filter === "Replied") l = l.filter((c) => c.status === "Replied");
     return l;
@@ -686,7 +813,7 @@
         try { const r = await WS.push.bookMeeting(c.personId, c.campaignId); mid = r.data.id; }
         catch (e) { toast(e.status === 409 ? "Meeting already booked" : "Server rejected the booking"); return; }
       }
-      ws.meetings.push({ id: mid, personId: c.personId, companyId: c.companyId,
+      ws.meetings.push({ id: mid, brandId: c.brandId || ws.activeBrand, personId: c.personId, companyId: c.companyId,
         campaignId: c.campaignId, at: Date.now() + 5 * 86400000, duration: 30, status: "Confirmed",
         title: co.name + " — AI readiness intro" });
       const camp = ws.campaigns.find((x) => x.id === c.campaignId); if (camp) camp.meetings++;
@@ -718,7 +845,7 @@
 
   // --------------------------------------------------------- HOT LEADS
   VIEWS.hot = function () {
-    const hot = ws.conversations.filter((c) => c.hot).sort((a, b) => b.intentMeta.confidence - a.intentMeta.confidence);
+    const hot = convos().filter((c) => c.hot).sort((a, b) => b.intentMeta.confidence - a.intentMeta.confidence);
     return '<div class="page-head"><div><h2>Hot leads</h2>' +
       "<p>Prospects who replied with meaningful interest, ranked by classifier confidence, with the next action for each.</p></div>" +
       '<div class="head-actions"><button class="btn ghost" data-act="exp-hot">⬇ Export CSV</button></div></div>' +
@@ -743,7 +870,7 @@
     const e = $("[data-act='exp-hot']");
     if (e) e.onclick = () => {
       const rows = [["Person", "Title", "Email", "Company", "Industry", "Employees", "Intent", "Confidence", "Recommended action", "Meeting status"]];
-      ws.conversations.filter((c) => c.hot).forEach((c) => {
+      convos().filter((c) => c.hot).forEach((c) => {
         const p = E.personById(c.personId), co = E.companyById(c.companyId);
         const m = ws.meetings.find((x) => x.personId === c.personId);
         rows.push([p.name, p.title, p.email, co.name, co.industry, co.size, c.intent, c.intentMeta.confidence + "%", c.intentMeta.action, m ? m.status : "Not booked"]);
@@ -754,8 +881,8 @@
 
   // ---------------------------------------------------------- MEETINGS
   VIEWS.meetings = function () {
-    const up = ws.meetings.filter((m) => m.at >= Date.now()).sort((a, b) => a.at - b.at);
-    const past = ws.meetings.filter((m) => m.at < Date.now()).sort((a, b) => b.at - a.at);
+    const up = meets().filter((m) => m.at >= Date.now()).sort((a, b) => a.at - b.at);
+    const past = meets().filter((m) => m.at < Date.now()).sort((a, b) => b.at - a.at);
     const row = (m) => {
       const co = E.companyById(m.companyId), p = E.personById(m.personId);
       const camp = ws.campaigns.find((c) => c.id === m.campaignId);
@@ -769,7 +896,7 @@
       "<p>Everything the agent booked out of a reply, plus what it has already run.</p></div></div>" +
       '<div class="stats">' + tile("Upcoming", num(up.length), "confirmed + proposed", true) +
         tile("Completed", num(past.filter((m) => m.status === "Completed").length), "already run") +
-        tile("Total booked", num(ws.meetings.length), "all time") + "</div>" +
+        tile("Total booked", num(meets().length), "all time") + "</div>" +
       '<div class="card" style="margin-bottom:16px"><div class="card-h"><h3>Upcoming</h3></div>' +
         (up.length ? '<div class="tbl-wrap" style="border:none;border-radius:0"><table class="tbl"><thead><tr><th>Account</th><th>Contact</th><th>When</th><th>Campaign</th><th>Status</th></tr></thead><tbody>' + up.map(row).join("") + "</tbody></table></div>"
           : '<div class="card-b" style="color:var(--faint);font-size:13px">Nothing scheduled.</div>') + "</div>" +
@@ -780,7 +907,7 @@
 
   // --------------------------------------------------------- ANALYTICS
   VIEWS.analytics = function () {
-    const a = E.analytics(ws);
+    const a = E.analytics({ campaigns: camps() });
     const maxR = Math.max.apply(null, a.byCampaign.map((c) => c.replyRate).concat([1]));
     return '<div class="page-head"><div><h2>Analytics</h2>' +
       "<p>Outcome metrics, not vanity metrics: what it costs to produce a reply, a hot lead and a meeting.</p></div>" +
@@ -789,8 +916,8 @@
         tile("Emails sent", num(a.sent), "across all campaigns") +
         tile("Replies", num(a.replies), a.replyRate + "% reply rate") +
         tile("Positive replies", num(a.positive), a.positiveRate + "% of replies") +
-        tile("Hot leads", num(ws.conversations.filter((c) => c.hot).length), "meaningful interest", true) +
-        tile("Meetings", num(ws.meetings.length), "booked") +
+        tile("Hot leads", num(convos().filter((c) => c.hot).length), "meaningful interest", true) +
+        tile("Meetings", num(meets().length), "booked") +
         tile("Spend", money(a.spend), "total") +
         tile("Cost / reply", money(a.costPerLead), "blended") +
         tile("Cost / meeting", money(a.costPerMeeting), "blended", true) +
@@ -814,7 +941,7 @@
   WIRE.analytics = function () {
     const e = $("[data-act='exp-an']");
     if (e) e.onclick = () => {
-      const a = E.analytics(ws);
+      const a = E.analytics({ campaigns: camps() });
       const rows = [["Campaign", "Leads", "Sent", "Replies", "Reply rate %", "Hot", "Meetings", "Spend"]];
       a.byCampaign.forEach((c) => rows.push([c.name, c.leads, c.sent, c.replies, c.replyRate, c.hot, c.meetings, c.spend]));
       exportCSV("drd-analytics.csv", rows);
@@ -890,7 +1017,7 @@
 
   // ----------------------------------------------------------- BILLING
   VIEWS.billing = function () {
-    const c = ws.credits, a = E.analytics(ws);
+    const c = ws.credits, a = E.analytics({ campaigns: camps() });
     const pct = Math.min(100, Math.round((c.used / c.included) * 100));
     const plans = [
       { n: "Starter", p: "$49", inc: "1,000 credits", f: ["Company + people search", "CSV export", "1 campaign"] },
@@ -991,9 +1118,9 @@
     return '<div class="page-head"><div><h2>Settings</h2><p>Sending posture, defaults and workspace controls.</p></div></div>' +
       '<div class="split"><div class="stack">' +
         '<div class="card pad"><div class="label" style="margin-bottom:12px">Business profile</div>' +
-          '<label class="field"><span>Website</span><input class="input" id="s_site" value="' + esc(ws.profile.website) + '"></label>' +
-          '<label class="field"><span>Company</span><input class="input" id="s_co" value="' + esc(ws.profile.company) + '"></label>' +
-          '<label class="field"><span>What you sell</span><textarea class="ta" id="s_prod" style="min-height:80px">' + esc(ws.profile.product) + "</textarea></label>" +
+          '<label class="field"><span>Website</span><input class="input" id="s_site" value="' + esc(brand().profile.website) + '"></label>' +
+          '<label class="field"><span>Company</span><input class="input" id="s_co" value="' + esc(brand().profile.company) + '"></label>' +
+          '<label class="field"><span>What you sell</span><textarea class="ta" id="s_prod" style="min-height:80px">' + esc(brand().profile.product) + "</textarea></label>" +
           '<button class="btn" id="s_save">Save profile</button></div>' +
         '<div class="card pad"><div class="label" style="margin-bottom:12px">Sending limits</div>' +
           '<label class="field"><span>Daily sends per mailbox</span><input class="input" id="s_limit" type="number" value="50"></label>' +
@@ -1013,8 +1140,8 @@
   };
   WIRE.settings = function () {
     $("#s_save").onclick = () => {
-      ws.profile.website = $("#s_site").value; ws.profile.company = $("#s_co").value; ws.profile.product = $("#s_prod").value;
-      save(); audit("profile.updated", ws.profile.company); toast("Profile saved");
+      brand().profile.website = $("#s_site").value; brand().profile.company = $("#s_co").value; brand().profile.product = $("#s_prod").value;
+      save(); audit("profile.updated", brand().profile.company); toast("Profile saved");
     };
     $("#s_reset").onclick = () => {
       if (!confirm("Reset the demo workspace to its seeded state?")) return;
@@ -1153,7 +1280,7 @@
 
   function openCampaign(id) {
     const c = ws.campaigns.find((x) => x.id === id); if (!c) return;
-    const icp = ws.icps.find((i) => i.id === c.icpId);
+    const icp = allIcps().find((i) => i.id === c.icpId);
     const leads = c.leadIds.map((lid) => E.personById(lid)).filter(Boolean).slice(0, 12);
     openDrawer(
       '<div class="drawer-h"><div><h3>' + esc(c.name) + "</h3>" +

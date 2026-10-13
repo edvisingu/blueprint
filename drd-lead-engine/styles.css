@@ -391,3 +391,38 @@ pre.code { background: var(--navy-900); border: 1px solid var(--border); border-
   font-size: 12.5px; color: var(--bad); background: var(--bad-dim);
   border-radius: 8px; padding: 9px 12px; margin-bottom: 14px;
 }
+
+/* ============================================================ BRANDS */
+.brandswitch { padding: 12px 12px 4px; border-bottom: 1px solid var(--border); }
+.brandswitch label {
+  font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--faint); font-weight: 600; display: block; margin-bottom: 6px;
+}
+.brandswitch select {
+  width: 100%; background: var(--navy-900); border: 1px solid var(--border);
+  color: var(--white); border-radius: 9px; padding: 9px 10px;
+  font-family: var(--font); font-size: 13px; font-weight: 600; outline: none;
+}
+.brandswitch select:focus { border-color: var(--gold-line); }
+.brandswitch .fitline { font-size: 10.5px; color: var(--faint); margin-top: 7px; line-height: 1.4; }
+.brandswitch .fitline b { color: var(--gold-bright); font-weight: 600; }
+
+.brandcard {
+  background: linear-gradient(150deg, rgba(201,168,76,0.08), var(--navy-800) 62%);
+  border: 1px solid var(--gold-line); border-radius: var(--r-lg);
+  padding: 18px; margin-bottom: 16px;
+}
+.brandcard h3 { font-size: 16px; font-weight: 800; letter-spacing: -0.01em; }
+.brandcard .dom { font-size: 12px; color: var(--gold-bright); }
+.brandcard .note { font-size: 12.5px; color: var(--muted); line-height: 1.6; margin-top: 10px; max-width: 76ch; }
+.pl { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.pl .it { background: var(--navy-850); border: 1px solid var(--border); border-radius: var(--r); padding: 12px; }
+.pl .it h4 { font-size: 13px; font-weight: 700; }
+.pl .it p { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.buyers .row2 {
+  display: grid; grid-template-columns: 170px 1fr auto; gap: 12px;
+  padding: 10px 0; border-top: 1px solid var(--border-soft); align-items: start; font-size: 12.5px;
+}
+.buyers .row2 .who { color: var(--white); font-weight: 600; }
+.buyers .row2 .how { color: var(--muted); line-height: 1.5; }
+@media (max-width: 900px) { .pl { grid-template-columns: 1fr; } .buyers .row2 { grid-template-columns: 1fr; } }

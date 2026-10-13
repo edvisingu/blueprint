@@ -72,6 +72,16 @@ window.DRD_DATA = (function () {
       titles: ["CISO", "VP Sales", "Head of Security Engineering"],
       pains: ["buyer alert fatigue", "crowded category", "proving risk reduction"],
       desc: (n) => `${n} sells security tooling to engineering and risk teams.` },
+    { industry: "Sports Club", subs: ["Soccer Club", "Hockey Association", "Basketball Program", "Multi-Sport Academy", "Travel Team"],
+      tech: ["TeamSnap", "SportsEngine", "Hudl", "Stack Sports", "Squarespace"],
+      titles: ["Club Director", "President", "Director of Player Development", "Head Coach", "Technical Director"],
+      pains: ["no college exposure for players", "roster and stats tracked in spreadsheets", "parents asking about NIL", "outdated club website"],
+      desc: (n) => `${n} runs competitive youth and amateur programs with multiple teams and age groups.` },
+    { industry: "School Athletics", subs: ["High School Athletics", "Prep School Program", "College Athletics", "District Athletics"],
+      tech: ["Hudl", "rSchoolToday", "Final Forms", "Arbiter", "MaxPreps"],
+      titles: ["Athletic Director", "Assistant Athletic Director", "Head Coach", "Compliance Officer", "Director of Athletics"],
+      pains: ["NIL rules are unclear to staff and families", "no central player record", "recruiting support is ad hoc", "athlete stats scattered across platforms"],
+      desc: (n) => `${n} oversees interscholastic athletic programs, rosters, eligibility and recruiting support.` },
   ];
 
   const GEO = [
@@ -91,6 +101,10 @@ window.DRD_DATA = (function () {
     { country: "Netherlands", region: "Randstad", cities: ["Amsterdam", "Rotterdam"] },
   ];
 
+  const SPORT_WORD = ["Soccer Club", "Hockey Association", "Basketball Academy", "Athletic Club",
+    "Sports Academy", "Football Program", "Volleyball Club", "Lacrosse Club", "Baseball Academy", "Athletics"];
+  const SCHOOL_WORD = ["High School Athletics", "Secondary Athletics", "Prep Athletics",
+    "Collegiate Athletics", "District Athletics"];
   const EDU_A = ["Northgate", "Lakeridge", "Fairmount", "Brookvale", "Sterling", "Crestwood", "Ashford", "Kingsmere",
     "Rowanhill", "Templeton", "Westbourne", "Highfield", "Claremont", "Stonebridge", "Elmwood", "Redcliff",
     "Thornbury", "Grantham", "Whitfield", "Ravenscourt", "Oakmere", "Bellhaven", "Coldwater", "Fernbrook",
@@ -110,8 +124,9 @@ window.DRD_DATA = (function () {
   // --- weighting ---------------------------------------------------------
   // The graph is deliberately skewed toward the markets this business actually
   // sells into, so ICP slices return usable volume instead of one-off rows.
-  const V_WEIGHT = { "Higher Education": 32, "EdTech": 26, "Corporate Training": 20, "Professional Services": 17,
-    "SaaS": 15, "Agency": 13, "Nonprofit": 9, "Fintech": 8, "HealthTech": 8, "Cybersecurity": 6 };
+  const V_WEIGHT = { "Higher Education": 32, "EdTech": 26, "Sports Club": 26, "School Athletics": 20,
+    "Corporate Training": 20, "Professional Services": 17, "SaaS": 15, "Agency": 13,
+    "Nonprofit": 9, "Fintech": 8, "HealthTech": 8, "Cybersecurity": 6 };
   const G_WEIGHT = { "Ontario": 38, "England": 12, "Northeast": 10, "British Columbia": 8, "West": 8, "South": 7,
     "Quebec": 6, "Midwest": 6, "Alberta": 5, "Scotland": 4, "Leinster": 3, "NSW": 3, "Bavaria": 3, "Randstad": 2 };
   const weighted = (arr, keyFn, table) => {
@@ -128,19 +143,26 @@ window.DRD_DATA = (function () {
     "Corporate Training": () => pick([int(40, 120), int(121, 400), int(401, 1200)]),
     "Nonprofit": () => pick([int(12, 60), int(61, 240)]),
     "Professional Services": () => pick([int(15, 70), int(71, 260), int(261, 900)]),
+    // Sports organisations are small staffs running large rosters.
+    "Sports Club": () => pick([int(4, 14), int(15, 40), int(41, 110)]),
+    "School Athletics": () => pick([int(6, 20), int(21, 60), int(61, 180)]),
   };
   const defaultSize = () => pick([int(8, 25), int(26, 60), int(61, 140), int(141, 400), int(401, 1400)]);
 
   // --- generate companies ------------------------------------------------
   const usedNames = new Set();
   const companies = [];
-  const TARGET_COMPANIES = 186;
+  const TARGET_COMPANIES = 268;
   let guard = 0;
   while (companies.length < TARGET_COMPANIES && guard++ < 20000) {
     const v = pick(V_BAG);
     const g = pick(G_BAG);
     let name;
-    if (v.industry === "Higher Education") {
+    if (v.industry === "Sports Club") {
+      name = pick(EDU_A) + " " + pick(SPORT_WORD);
+    } else if (v.industry === "School Athletics") {
+      name = pick(EDU_A) + " " + pick(SCHOOL_WORD);
+    } else if (v.industry === "Higher Education") {
       name = pick(EDU_A) + " " + pick(["University", "College", "Polytechnic", "Institute", "College of Applied Arts"]);
     } else {
       name = pick(NAME_A) + pick(NAME_B);
@@ -243,8 +265,190 @@ window.DRD_DATA = (function () {
       buyers: ["Founder", "Managing Director", "Head of Growth"] },
   ];
 
+  // --- brands -----------------------------------------------------------
+  // One portfolio brand that rolls up, plus one pipeline per revenue motion.
+  // "fit" is honest about whether company-based outbound suits that brand at all.
+  const brands = [
+    {
+      id: "drdverse", name: "DRDverse", domain: "drdverse.com", role: "portfolio", fit: "Roll-up",
+      tagline: "The official Dr. D brand and front door",
+      note: "Not a pipeline. DRDverse speaks to CrediVersity, EdVisingU and DRD Sports, so it shows the combined picture across every brand rather than carrying leads of its own.",
+      industries: [], icps: [],
+      profile: {
+        website: "drdverse.com", company: "DRDverse",
+        industry: "Portfolio brand",
+        product: "The umbrella brand and landing experience routing visitors to CrediVersity, EdVisingU and DRD Sports",
+        targetCustomer: "Anyone arriving at the Dr. D brand before they know which offer fits",
+        likelyBuyer: "Not applicable, this is the front door",
+        geography: "Canada, United States, United Kingdom",
+        painPoints: ["Visitors cannot tell which brand serves them", "Authority is split across separate sites"],
+        useCases: ["Brand front door", "Routing to the right offer", "Credibility and proof"],
+        differentiators: ["One recognised practitioner behind every brand"],
+        pricingSignal: "No direct sale",
+      },
+    },
+    {
+      id: "edvisingu", name: "EdVisingU", domain: "edvisingu.com", role: "pipeline", fit: "Strong",
+      tagline: "Institutional AI literacy and readiness consulting",
+      note: "The best fit for outbound. Named institutional buyers, long cycles, high contract value.",
+      industries: ["Higher Education", "EdTech", "Corporate Training", "Professional Services", "Agency", "Nonprofit"],
+      profile: businessProfile,
+      icps: icps,
+    },
+    {
+      id: "drdsports", name: "DRD Sports", domain: "drdsports.com", role: "pipeline", fit: "Strong",
+      tagline: "Team databases, websites, player repositories, stats and NIL education",
+      note: "Two product lines with different buyers. Owners and coaches buy the website and database build, which is the outbound motion. Parents buy 1:1 coaching with Dr. D in AI education and NIL, which is a funnel motion reached through the club, never cold outreach to families. The platform is the distribution channel for the coaching: land the organisation, and its parent base becomes the warm audience for sessions. NIL is a United States framework, so NIL-led targeting weights to the US while the website and database offer travels anywhere.",
+      productLines: [
+        { id: "platform", name: "Website and database build",
+          what: "Club or team website, player repository, roster and season stats",
+          buyers: "Organisation owners, directors and coaches", motion: "outbound" },
+        { id: "coaching", name: "1:1 coaching with Dr. D",
+          what: "One-to-one sessions in AI education and NIL for the athlete",
+          buyers: "Parents and families", motion: "funnel" },
+      ],
+      buyerTypes: [
+        { who: "Organisation owners and directors", product: "Website and database build",
+          buys: "The platform across the whole club: site, player repository, rosters, stats",
+          reach: "Outbound. They are findable, they hold the budget, and they decide for every team.", motion: "outbound" },
+        { who: "Coaches", product: "Website and database build",
+          buys: "Their own team's site, roster and stats, often before the club commits centrally",
+          reach: "Outbound. A much smaller decision, far faster, and the cheapest route into the wider club.", motion: "outbound" },
+        { who: "Parents", product: "1:1 coaching with Dr. D",
+          buys: "One-to-one sessions for their athlete in AI education and NIL",
+          reach: "Through the club or coach that already has their trust, plus content. Never cold outreach to families or minors.", motion: "funnel" },
+      ],
+      industries: ["Sports Club", "School Athletics"],
+      profile: {
+        website: "drdsports.com", company: "DRD Sports",
+        industry: "Sports technology and athlete development",
+        product: "Two lines: website and database builds for clubs and teams, and 1:1 coaching with Dr. D in AI education and NIL for athletes",
+        targetCustomer: "Competitive youth clubs, multi-sport academies and athletic departments, plus the coaches inside them and the players and families they serve",
+        likelyBuyer: "Owner or director for a club-wide build, head coach for a single team, parent for 1:1 coaching sessions",
+        geography: "Canada and United States, NIL programming weighted to the United States",
+        painPoints: [
+          "Players get no college exposure because there is no central record",
+          "Rosters and stats live in spreadsheets",
+          "Families ask about NIL and staff have no credible answer",
+          "The club website is dated and parents do not trust it",
+        ],
+        useCases: ["Club or team website build", "Player repository and recruiting profiles",
+          "Season stats and roster database", "1:1 AI education sessions for an athlete",
+          "1:1 NIL coaching for an athlete and their family"],
+        differentiators: ["Built by an education leader, not a web shop",
+          "NIL taught as curriculum rather than marketing", "One system for site, roster and stats"],
+        pricingSignal: "Build: per-program setup plus annual platform fee. Coaching: per session or package, bought by the parent",
+      },
+      icps: [
+        { id: "sp_1", name: "Competitive youth clubs", fit: 91, industry: "Sports Club", country: null, sizeMin: null, approved: true,
+          why: "Directly matches the core offer. These clubs carry many teams and age groups, run on spreadsheets, and are under constant parent pressure to show college pathways.",
+          buyers: ["Club Director", "Technical Director", "President"] },
+        { id: "sp_2", name: "Multi-sport academies and prep programs", fit: 86, industry: "Sports Club", country: null, sizeMin: 15, approved: true,
+          why: "College placement is the product they sell to families, so a player repository is the artifact they are missing. Larger staffs mean real budget.",
+          buyers: ["Director of Player Development", "Club Director", "Head Coach"] },
+        { id: "sp_3", name: "US high school athletic departments", fit: 84, industry: "School Athletics", country: "United States", sizeMin: null, approved: true,
+          why: "NIL rules now reach high school athletes in most states and athletic directors have no curriculum to hand families. This is the clearest why-now in the portfolio.",
+          buyers: ["Athletic Director", "Assistant Athletic Director", "Compliance Officer"] },
+        { id: "sp_4", name: "College athletic programs, NIL compliance", fit: 78, industry: "School Athletics", country: "United States", sizeMin: 40, approved: false,
+          why: "Real mandate and real budget, but procurement is slow and compliance offices are crowded with vendors. Credible, not fast.",
+          buyers: ["Compliance Officer", "Director of Athletics"] },
+        { id: "sp_6", name: "Head coaches buying for one team", fit: 82, industry: "Sports Club", country: null, sizeMin: null, approved: true,
+          why: "The fastest decision in the portfolio. A coach can buy for their own team without club approval, and a team that works becomes the reference that sells the whole organisation. Land small, expand upward.",
+          buyers: ["Head Coach", "Technical Director", "Director of Player Development"] },
+        { id: "sp_5", name: "Canadian clubs and associations", fit: 74, industry: "Sports Club", country: "Canada", sizeMin: null, approved: true,
+          why: "Strong fit for the website, roster and stats offer and an easy local reference base. Lead with exposure and administration, not NIL, which does not apply the same way here.",
+          buyers: ["Club Director", "President", "Technical Director"] },
+      ],
+    },
+    {
+      id: "crediversity", name: "CrediVersity", domain: "crediversity.com", role: "pipeline", fit: "Partial",
+      tagline: "Micro-credentials, courses and digital products",
+      note: "The main motion is funnel and content, not outbound, because the catalogue sells to individuals at $29 to $97. The outbound wedge is organisations that buy seats in bulk or white-label the catalogue.",
+      industries: ["Corporate Training", "Professional Services", "Nonprofit", "Agency"],
+      profile: {
+        website: "crediversity.com", company: "CrediVersity",
+        industry: "Digital learning products",
+        product: "Micro-credentials, courses, prompt packs and toolkits",
+        targetCustomer: "Individual learners, plus organisations buying seats or licensing the catalogue",
+        likelyBuyer: "Head of L&D, Training Manager, Program Director, Association Executive",
+        geography: "Global, English language",
+        painPoints: ["Staff need practical AI skills now", "No budget for enterprise training platforms",
+          "Members expect professional development that is current"],
+        useCases: ["Bulk seats for a team", "White-label catalogue for a training provider",
+          "Member professional development for an association"],
+        differentiators: ["Practitioner-built", "Priced for real budgets", "Deployable immediately"],
+        pricingSignal: "$29 to $97 per product, bulk and licensing negotiable",
+      },
+      icps: [
+        { id: "cv_1", name: "SMB L&D teams buying seats", fit: 72, industry: "Corporate Training", country: null, sizeMin: 60, approved: true,
+          why: "Has a training mandate and no platform budget, which is exactly the gap a per-seat micro-credential fills.",
+          buyers: ["Head of L&D", "Training Manager", "VP People"] },
+        { id: "cv_2", name: "Training providers to white-label", fit: 68, industry: "Professional Services", country: null, sizeMin: 10, approved: false,
+          why: "They need current AI content they cannot build themselves. Higher value per deal but a longer conversation about rights.",
+          buyers: ["Managing Partner", "Practice Lead", "Director of Business Development"] },
+        { id: "cv_3", name: "Associations offering member PD", fit: 64, industry: "Nonprofit", country: null, sizeMin: null, approved: false,
+          why: "Member professional development is a renewal driver for them. Slower cycles, governed by boards and committees.",
+          buyers: ["Executive Director", "Director of Programs"] },
+      ],
+    },
+    {
+      id: "hireed", name: "HireEd Nexus", domain: "hireednexus.com", role: "pipeline", fit: "Strong",
+      tagline: "Work-integrated learning and student project placement",
+      note: "Two-sided. Outbound works best on the employer side, because institutions are easier to reach through the EdVisingU relationship.",
+      industries: ["SaaS", "Agency", "Professional Services", "Higher Education", "Fintech", "HealthTech"],
+      profile: {
+        website: "hireednexus.com", company: "HireEd Nexus",
+        industry: "Work-integrated learning platform",
+        product: "Connects enrolled students to paid real-world projects with employers",
+        targetCustomer: "Employers needing project talent, and co-op or career services offices",
+        likelyBuyer: "Head of Talent, Hiring Manager, Director of Co-op and Career Services",
+        geography: "Canada, with Ontario first",
+        painPoints: ["Junior hiring is expensive and slow", "Projects sit undone for lack of capacity",
+          "Co-op offices struggle to source enough quality placements"],
+        useCases: ["Scoped student project", "Talent pipeline without a hiring commitment",
+          "Placement supply for a co-op office"],
+        differentiators: ["Academically supervised", "Scoped and outcome-based", "Built inside a higher-ed practice"],
+        pricingSignal: "Per project or per placement",
+      },
+      icps: [
+        { id: "hn_1", name: "Growth companies needing project talent", fit: 83, industry: "SaaS", country: "Canada", sizeMin: 25, approved: true,
+          why: "Has a backlog and no budget for a full hire, which is precisely the gap a scoped student project fills.",
+          buyers: ["Head of Growth", "Hiring Manager", "CEO"] },
+        { id: "hn_2", name: "Agencies with overflow work", fit: 76, industry: "Agency", country: "Canada", sizeMin: 10, approved: true,
+          why: "Project-shaped work and thin margins make supervised student capacity attractive, and they decide fast.",
+          buyers: ["Managing Director", "Founder", "Head of Growth"] },
+        { id: "hn_3", name: "Co-op and career services offices", fit: 80, industry: "Higher Education", country: "Canada", sizeMin: 200, approved: false,
+          why: "They need placement supply, and the EdVisingU relationship is a warmer route in than cold outbound.",
+          buyers: ["Director of Continuing Education", "AVP Innovation", "Dean of Students"] },
+      ],
+    },
+    {
+      id: "drdlearn", name: "Dr. D Learn", domain: "drdlearn.com", role: "audience", fit: "Low",
+      tagline: "The personal brand and content face",
+      note: "Outbound is the wrong tool here. This brand grows through content, speaking and inbound. Kept visible so the portfolio is complete, but expect little from prospecting it.",
+      industries: ["Agency", "Corporate Training", "Nonprofit"],
+      profile: {
+        website: "drdlearn.com", company: "Dr. D Learn",
+        industry: "Personal brand, content and education",
+        product: "Content, commentary, speaking and freelance engagements",
+        targetCustomer: "Audience first. Buyers arrive through content rather than outreach",
+        likelyBuyer: "Event programmer, podcast producer, small business owner",
+        geography: "Global, English language",
+        painPoints: ["Audiences want a credible practitioner voice on AI in education"],
+        useCases: ["Speaking", "Content partnership", "Freelance engagement"],
+        differentiators: ["Named practitioner with institutional credibility"],
+        pricingSignal: "Varies by engagement",
+      },
+      icps: [
+        { id: "dl_1", name: "Conference and event programmers", fit: 58, industry: "Nonprofit", country: "Canada", sizeMin: null, approved: false,
+          why: "Speaking builds authority that feeds every other brand, but these are relationship and referral driven, not cold-email driven.",
+          buyers: ["Executive Director", "Director of Programs"] },
+      ],
+    },
+  ];
+
   return {
-    companies, people, peopleByCompany, businessProfile, icps,
+    companies, people, peopleByCompany, businessProfile, icps, brands,
     vocab: { SIGNALS, REV_BANDS, VERTICALS, GEO },
     rnd,
   };
