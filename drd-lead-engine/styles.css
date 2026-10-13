@@ -523,6 +523,24 @@ pre.code {
   font-size: var(--t-fine); color: var(--fg-2); line-height: 1.62;
 }
 
+/* ======================================================== BANNERS
+   System-state notices. Deliberately loud and above the page title: every
+   figure on every screen means something different depending on whether
+   sample data is present and whether sending is armed. */
+.banner {
+  display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
+  padding: 11px 14px; border-radius: var(--r); margin-bottom: 14px;
+  font-size: var(--t-fine); line-height: 1.5; border: 1px solid;
+}
+.banner b { color: var(--fg); }
+.banner.bad { background: var(--down-wash); border-color: rgba(232,99,124,.4); color: var(--fg-2); }
+.banner.gold { background: var(--gold-wash); border-color: var(--gold-edge); color: var(--fg-2); }
+.banner.muted { background: var(--ink-2); border-color: var(--rule); color: var(--fg-3); }
+@media (max-width: 860px) {
+  .banner { padding: 10px 12px; }
+  .banner .btn { width: 100%; justify-content: center; }
+}
+
 /* ======================================================== MOBILE NAV */
 .mobilebar, .sheet, .sheet-veil { display: none; }
 

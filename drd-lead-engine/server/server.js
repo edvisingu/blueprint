@@ -826,6 +826,20 @@ function create(opts) {
       log(`${req.method} ${u.pathname} ${status} ${Date.now() - started}ms`);
     };
 
+    // Browsers request this unprompted on every page load. Without it the
+    // access log carries a 404 per visit, which is noise that hides real ones.
+    if (u.pathname === "/favicon.ico" || u.pathname === "/favicon.svg") {
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<rect width="32" height="32" rx="4" fill="#C9A84C"/>' +
+        '<text x="16" y="22" font-family="Montserrat,sans-serif" font-size="15" font-weight="800" ' +
+        'text-anchor="middle" fill="#0A1628">DD</text></svg>';
+      res.writeHead(200, Object.assign({
+        "content-type": "image/svg+xml",
+        "cache-control": "public, max-age=86400",
+      }, SEC));
+      return res.end(svg);
+    }
+
     if (u.pathname === "/config.js") {
       // The browser authenticates with an httpOnly session cookie. No key is
       // ever shipped to the client; API keys are for server-to-server callers.

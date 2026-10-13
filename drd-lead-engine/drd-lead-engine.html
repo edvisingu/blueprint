@@ -526,6 +526,24 @@ pre.code {
   font-size: var(--t-fine); color: var(--fg-2); line-height: 1.62;
 }
 
+/* ======================================================== BANNERS
+   System-state notices. Deliberately loud and above the page title: every
+   figure on every screen means something different depending on whether
+   sample data is present and whether sending is armed. */
+.banner {
+  display: flex; align-items: center; gap: 11px; flex-wrap: wrap;
+  padding: 11px 14px; border-radius: var(--r); margin-bottom: 14px;
+  font-size: var(--t-fine); line-height: 1.5; border: 1px solid;
+}
+.banner b { color: var(--fg); }
+.banner.bad { background: var(--down-wash); border-color: rgba(232,99,124,.4); color: var(--fg-2); }
+.banner.gold { background: var(--gold-wash); border-color: var(--gold-edge); color: var(--fg-2); }
+.banner.muted { background: var(--ink-2); border-color: var(--rule); color: var(--fg-3); }
+@media (max-width: 860px) {
+  .banner { padding: 10px 12px; }
+  .banner .btn { width: 100%; justify-content: center; }
+}
+
 /* ======================================================== MOBILE NAV */
 .mobilebar, .sheet, .sheet-veil { display: none; }
 
@@ -1951,6 +1969,11 @@ window.DRD_WORKSPACE = (function () {
   // ---- icons -------------------------------------------------------------
   // A single stroke set, drawn at one weight, instead of glyphs or emoji.
   const PATHS = {
+    refresh: '<path d="M20 11a8 8 0 0 0-13.7-5.3L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 13.7 5.3L20 16"/><path d="M20 20v-4h-4"/>',
+    send: '<path d="M4 12l16-8-7 16-2-6z"/>',
+    trash: '<path d="M4 7h16"/><path d="M9 7V4h6v3"/><path d="M6 7l1 13h10l1-13"/>',
+    up: '<path d="M12 20V5"/><path d="M6 11l6-6 6 6"/>',
+    shield: '<path d="M12 3l7 3v5c0 4.2-2.8 7.8-7 9-4.2-1.2-7-4.8-7-9V6z"/><path d="M9 12l2 2 4-4"/>',
     overview: '<path d="M4 13h7V4H4zM13 20h7v-9h-7zM4 20h7v-4H4zM13 8h7V4h-7z"/>',
     agent: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/>',
     companies: '<path d="M4 20V7l8-4 8 4v13"/><path d="M9 20v-6h6v6"/><path d="M4 20h16"/>',
@@ -2051,6 +2074,7 @@ window.DRD_WORKSPACE = (function () {
     { id: "hot", ic: "hot", t: "Hot Leads", badge: () => convos().filter((c) => c.hot).length },
     { id: "meetings", ic: "meetings", t: "Meetings" },
     { g: "Operations" },
+    { id: "golive", ic: "shield", t: "Go live", badge: () => (ws.golive && ws.golive.blockingFailed) || 0 },
     { id: "analytics", ic: "analytics", t: "Analytics" },
     { id: "data", ic: "data", t: "Data & Compliance" },
     { id: "billing", ic: "billing", t: "Billing" },
@@ -2136,20 +2160,368 @@ window.DRD_WORKSPACE = (function () {
     sh.classList.remove("on"); $("#sheetveil").classList.remove("on");
   }
 
+  /* The state of the system, said plainly on every screen.
+   *
+   * Two things an operator must never misread: that generated sample contacts
+   * are real pipeline, and that a configured campaign is actually delivering.
+   * Both are shown as a banner rather than buried in a settings page, because
+   * every number on every other screen means something different depending on
+   * them. */
+  function modeBanner(view) {
+    const g = ws.golive;
+    const demo = (g && g.coverage && g.coverage.demoContacts) || 0;
+    const live = WS.hasApi();
+    const parts = [];
+
+    if (demo > 0) {
+      parts.push(
+        '<div class="banner bad"><span class="pill bad">SAMPLE DATA</span>' +
+        "<span><b>" + num(demo) + " generated contacts</b> are in this database. They can never be " +
+        "emailed, but every count and chart here includes them. Purge before trusting a number.</span>" +
+        '<span class="grow"></span><button class="btn ghost sm" data-banner="golive">Go live</button></div>'
+      );
+    }
+    if (live && g && !g.armed) {
+      parts.push(
+        '<div class="banner gold"><span class="pill gold">DISARMED</span>' +
+        "<span>Nothing is being delivered. Campaigns will queue and skip every send until sending is " +
+        "armed on the Go live screen.</span>" +
+        '<span class="grow"></span><button class="btn ghost sm" data-banner="golive">Open the gate</button></div>'
+      );
+    }
+    // The Go live screen explains the no-backend case in full, so the short
+    // banner would just repeat it.
+    if (!live && view !== "golive") {
+      parts.push(
+        '<div class="banner muted"><span class="pill muted">LOCAL DEMO</span>' +
+        "<span>No backend is connected, so this is a sample dataset in your browser. Nothing can send " +
+        "and nothing is stored on a server.</span></div>"
+      );
+    }
+    return parts.join("");
+  }
+
   function go(view) {
     state.view = view;
     renderNav();
     const t = NAV.find((n) => n.id === view);
     $("#ptitle").textContent = t ? t.t : view;
     const fn = VIEWS[view];
-    $("#page").innerHTML = fn ? fn() : '<div class="empty">Not found</div>';
+    $("#page").innerHTML = modeBanner(view) + (fn ? fn() : '<div class="empty">Not found</div>');
     if (WIRE[view]) WIRE[view]();
+    $$("[data-banner]").forEach((b) => b.addEventListener("click", () => go(b.dataset.banner)));
     window.scrollTo(0, 0);
   }
 
   // ================================================================ VIEWS
   const VIEWS = {};
   const WIRE = {};
+
+
+  // ------------------------------------------------------------ GO LIVE
+  // Everything that decides whether this system may contact a real person.
+  // It was all reachable by API and invisible in the app, which is the same as
+  // not existing: an operator cannot act on a gate they cannot see.
+  VIEWS.golive = function () {
+    const g = ws.golive || null;
+    const cov = (g && g.coverage) || {};
+    const checks = (g && g.checks) || [];
+    const blocking = checks.filter((c) => c.blocking);
+    const advisory = checks.filter((c) => !c.blocking);
+    const armed = g && g.armed;
+
+    // Without a backend there is nothing to check, and spinning forever is
+    // worse than saying so. Explain what the gate does and what it needs.
+    if (!WS.hasApi()) {
+      const items = [
+        ["No generated sample contacts present", "Fiction in the database makes every figure meaningless."],
+        ["At least one real contact, imported with provenance", "Consent cannot be reconstructed after the fact."],
+        ["Every contact has a live consent basis", "Scoped per brand, with its own expiry clock."],
+        ["Sender identification set", "Legal name, mailing address and contact details in every message."],
+        ["An active mailbox with a valid timezone", "Daily caps reset on the mailbox's own clock."],
+        ["No open critical alerts", "A paused mailbox or missing identification blocks arming."],
+        ["A reachable unsubscribe URL", "The opt-out link has to actually work."],
+        ["SPF and DMARC present on every sending domain", "Unverifiable counts as not ready, not as fine."],
+        ["A clearance record on file", "Who authorised activation, and when."],
+      ];
+      return '<div class="page-head"><div><h2>Go live</h2>' +
+        "<p>The gate that decides whether this system may contact a real person. It runs against the " +
+        "backend, so it is unavailable in this browser-only build.</p></div></div>" +
+        '<div class="banner muted"><span class="pill muted">BACKEND REQUIRED</span>' +
+        "<span>This build has no server, so there is nothing to arm and nothing that can send. " +
+        "Run the API locally and the checks below become live.</span></div>" +
+        '<div class="card"><div class="card-h"><h3>What must pass before sending is armed</h3>' +
+          '<span class="grow"></span><span style="font-size:11px;color:var(--faint)">' +
+          items.length + " blocking checks</span></div>" +
+          '<div class="card-b"><div class="stack">' +
+          items.map((it, i) =>
+            '<div class="rowflex" style="align-items:flex-start;gap:10px">' +
+            '<span class="pill muted" style="margin-top:1px">' + (i + 1) + "</span>" +
+            '<div class="grow"><div class="prime">' + esc(it[0]) + "</div>" +
+            '<div class="sub" style="margin-top:2px">' + esc(it[1]) + "</div></div></div>").join("") +
+          "</div>" +
+          '<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border-soft);' +
+            'font-size:12px;color:var(--muted);line-height:1.6;max-width:74ch">' +
+            "<b>A passing gate is not a legal opinion.</b> It means the system is configured correctly. " +
+            "Qualified Canadian legal review of the consent basis for a list is required before sending. " +
+            "See docs/GO-LIVE.md and docs/COMPLIANCE.md in the repository." +
+          "</div></div></div>";
+    }
+
+    if (!g) {
+      return '<div class="page-head"><div><h2>Go live</h2>' +
+        "<p>The gate that decides whether this system may contact a real person.</p></div></div>" +
+        '<div class="card pad"><div class="loading"><div class="spin"></div>' +
+        "Running the readiness checks</div></div>";
+    }
+
+    const row = (c) => {
+      const pill = c.status === "pass" ? '<span class="pill good">PASS</span>'
+        : c.status === "unverified" ? '<span class="pill warn">UNVERIFIED</span>'
+        : '<span class="pill bad">FAIL</span>';
+      return '<tr><td data-l="CHECK"><div class="prime">' + esc(c.key.replace(/_/g, " ")) + "</div>" +
+        '<div class="sub">' + esc(c.summary || "") + "</div></td>" +
+        '<td data-l="STATUS">' + pill + "</td>" +
+        '<td data-l="WHAT TO DO">' + (c.remedy
+          ? '<div style="font-size:12px;color:var(--muted);line-height:1.5;max-width:60ch">' + esc(c.remedy) + "</div>"
+          : '<span style="color:var(--faint)">nothing to do</span>') + "</td></tr>";
+    };
+
+    return '<div class="page-head"><div><h2>Go live</h2>' +
+      "<p>Sending is refused until every blocking check passes. A green gate means this system is " +
+      "configured correctly. It is not a legal opinion.</p></div>" +
+      '<div class="head-actions">' +
+        '<button class="btn ghost" data-act="gl-refresh">' + ico("refresh") + "Re-run checks</button>" +
+        (armed
+          ? '<button class="btn danger" data-act="gl-disarm">' + ico("pause") + "Disarm sending</button>"
+          : '<button class="btn" data-act="gl-arm"' + (g.canArm ? "" : " disabled") + ">" +
+            ico("send") + "Arm sending</button>") +
+      "</div></div>" +
+
+      // The one thing an operator must never misread.
+      '<div class="card pad" style="margin-bottom:18px;border-left:2px solid ' +
+        (armed ? "var(--good)" : "var(--gold)") + '">' +
+        '<div class="rowflex"><span class="' + (armed ? "pill good" : "pill gold") + '">' +
+          (armed ? "ARMED" : "DISARMED") + "</span>" +
+          '<span style="font-weight:600">' + (armed
+            ? "Messages can be delivered."
+            : "Nothing will be delivered, whatever a campaign says.") + "</span>" +
+          '<span class="grow"></span>' +
+          '<span style="font-size:12px;color:var(--faint)">' +
+            blocking.filter((c) => c.status === "pass").length + " of " + blocking.length +
+            " blocking checks passing</span></div>" +
+        (g.canArm || armed ? "" :
+          '<div style="font-size:12px;color:var(--muted);margin-top:10px">' +
+          esc(g.disclaimer || "") + "</div>") +
+      "</div>" +
+
+      '<div class="stats">' +
+        tile("Real contacts", num(cov.realContacts), "imported with provenance", true) +
+        tile("With live consent", num(cov.withLiveBasis), "may be contacted") +
+        tile("Sample data", num(cov.demoContacts), cov.demoContacts ? "must be purged" : "none present") +
+        tile("Expiring in 30 days", num(cov.expiringIn30Days), "implied consent clocks") +
+      "</div>" +
+
+      '<div class="sec"><span class="label">Blocking checks</span>' +
+        '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Check</th><th>Status</th>' +
+        "<th>What to do</th></tr></thead><tbody>" +
+        blocking.map(row).join("") + "</tbody></table></div></div>" +
+
+      (advisory.length ? '<div class="sec"><span class="label">Advisory</span>' +
+        '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Check</th><th>Status</th>' +
+        "<th>What to do</th></tr></thead><tbody>" +
+        advisory.map(row).join("") + "</tbody></table></div></div>" : "") +
+
+      '<div class="split">' +
+        '<div class="card"><div class="card-h"><h3>Open alerts</h3><span class="grow"></span>' +
+          '<span style="font-size:11px;color:var(--faint)">' + ((ws.alerts || []).length) + " open</span></div>" +
+          '<div class="card-b">' + ((ws.alerts || []).length === 0
+            ? '<div style="color:var(--faint);font-size:13px">Nothing outstanding.</div>'
+            : (ws.alerts || []).map((a) =>
+              '<div style="padding:10px 0;border-bottom:1px solid var(--border-soft)">' +
+              '<div class="rowflex"><span class="pill ' +
+                (a.severity === "critical" ? "bad" : a.severity === "warn" ? "warn" : "muted") + '">' +
+                esc(a.severity) + "</span>" +
+              '<span class="prime">' + esc(a.subject) + "</span>" +
+              (a.count > 1 ? '<span class="chip">x' + a.count + "</span>" : "") +
+              '<span class="grow"></span>' +
+              '<button class="btn ghost sm" data-ack="' + esc(a.id) + '">Acknowledge</button></div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5">' +
+                esc(a.detail || "") + "</div></div>").join("")) + "</div></div>" +
+
+        '<div class="stack">' +
+          '<div class="card"><div class="card-h"><h3>Consent by basis</h3></div><div class="card-b">' +
+            ((cov.byBasis || []).length === 0
+              ? '<div style="color:var(--faint);font-size:13px">No consent recorded yet.</div>'
+              : '<div class="bd">' + (cov.byBasis || []).map((b) => {
+                  const pct = cov.withLiveBasis ? Math.round((b.n / cov.withLiveBasis) * 100) : 0;
+                  return '<div class="r"><span class="n">' + esc(String(b.basis).replace(/_/g, " ")) +
+                    '</span><span class="t"><i style="width:' + pct + '%"></i></span>' +
+                    '<span class="v">' + b.n + "</span></div>";
+                }).join("") + "</div>") + "</div></div>" +
+
+          '<div class="card"><div class="card-h"><h3>Job queue</h3></div><div class="card-b">' +
+            '<div class="kv">' +
+              Object.entries((ws.jobs && ws.jobs.byState) || {}).map(([k, v]) =>
+                '<div><div class="k">' + esc(k) + '</div><div class="v num">' + v + "</div></div>").join("") +
+              '<div><div class="k">Overdue</div><div class="v num"' +
+                (((ws.jobs || {}).overdue) ? ' style="color:var(--bad)"' : "") + ">" +
+                num((ws.jobs || {}).overdue) + "</div></div>" +
+              '<div><div class="k">Stalled</div><div class="v num"' +
+                (((ws.jobs || {}).stalled) ? ' style="color:var(--bad)"' : "") + ">" +
+                num((ws.jobs || {}).stalled) + "</div></div>" +
+            "</div>" +
+            ((ws.jobs && ws.jobs.dead && ws.jobs.dead.length)
+              ? '<div style="margin-top:12px"><span class="label">Gave up</span>' +
+                (ws.jobs.dead || []).map((d) => '<div style="font-size:12px;color:var(--muted);margin-top:6px">' +
+                  esc(d.kind) + " x" + d.n + ": " + esc(String(d.last_error || "").slice(0, 120)) + "</div>").join("") + "</div>"
+              : "") +
+          "</div></div>" +
+        "</div>" +
+      "</div>" +
+
+      '<div class="card pad" style="margin-top:18px">' +
+        '<span class="label">Import real contacts</span>' +
+        '<p style="font-size:12px;color:var(--muted);margin:8px 0 12px;max-width:72ch;line-height:1.6">' +
+        "Consent provenance is required at import because it cannot be reconstructed later. Paste CSV " +
+        "with the template columns, or download the template first. Every rejected row comes back with " +
+        "its line number and reason.</p>" +
+        '<textarea class="ta" id="imp-csv" data-keep placeholder="email,name,company,consent_basis,consent_captured_at,consent_source&#10;..."></textarea>' +
+        '<div class="rowflex" style="margin-top:10px">' +
+          '<button class="btn" data-act="imp-run">' + ico("up") + "Import</button>" +
+          '<button class="btn ghost" data-act="imp-template">' + ico("down") + "Get template</button>" +
+          '<label class="toggle" title="A domain with no MX record cannot receive mail, so those rows ' +
+            'are rejected. Skip only when testing, or when DNS is unavailable.">' +
+            '<input type="checkbox" id="imp-skipmx"' + (ws.impSkipMx ? " checked" : "") +
+            '><span class="tr"></span>' +
+            '<span style="font-size:11px;color:var(--faint)">Skip deliverability check</span></label>' +
+          '<span class="grow"></span>' +
+          (cov.demoContacts ? '<button class="btn danger" data-act="imp-purge">' +
+            ico("trash") + "Purge " + num(cov.demoContacts) + " sample contacts</button>" : "") +
+        "</div>" +
+        '<div id="imp-out" style="margin-top:12px">' +
+          (ws.lastImport ? importReport(ws.lastImport) : "") + "</div>" +
+      "</div>";
+  };
+
+  WIRE.golive = function () {
+    const refresh = async () => {
+      if (!WS.hasApi()) return;
+      try {
+        const [rd, al, jb] = await Promise.all([
+          WS.api("GET", "/v1/readiness"),
+          WS.api("GET", "/v1/alerts"),
+          WS.api("GET", "/v1/jobs"),
+        ]);
+        ws.golive = rd;
+        ws.alerts = (al && al.data) || [];
+        ws.jobs = (jb && jb.stats) || {};
+        go("golive");
+      } catch (e) { toast("Could not load readiness: " + e.message); }
+    };
+    if (!ws.golive && WS.hasApi()) refresh();
+
+    $$("[data-act]").forEach((b) => b.addEventListener("click", async () => {
+      const act = b.dataset.act;
+      if (act === "gl-refresh") return refresh();
+      if (act === "gl-arm" || act === "gl-disarm") {
+        const arming = act === "gl-arm";
+        try {
+          const r = await WS.api("POST", "/v1/readiness/arm", { armed: arming });
+          toast(r.armed ? "Sending armed" : "Sending disarmed");
+          refresh();
+        } catch (e) {
+          toast(arming ? "Refused: readiness checks still failing" : "Could not disarm");
+          refresh();
+        }
+        return;
+      }
+      if (act === "imp-template") {
+        try {
+          const t = await WS.api("GET", "/v1/import/template");
+          const el = $("#imp-csv");
+          if (el) el.value = t.csv || "";
+          toast("Template loaded. Replace the example row.");
+        } catch (e) { toast("Could not load the template"); }
+        return;
+      }
+      if (act === "imp-run") {
+        const csv = ($("#imp-csv") || {}).value || "";
+        if (!csv.trim()) return toast("Paste some CSV first");
+        const out = $("#imp-out");
+        if (out) out.innerHTML = '<div class="loading"><div class="spin"></div>Importing</div>';
+        try {
+          // Remembered in state: a repaint recreates the control, and losing the
+          // operator's choice on every action is its own small bug.
+          ws.impSkipMx = !!(($("#imp-skipmx") || {}).checked);
+          const r = await WS.api("POST", "/v1/import", { csv, skip_mx: ws.impSkipMx });
+          // Held in state: refresh() repaints the whole view, and an earlier
+          // version wrote the report straight into the DOM, so the repaint
+          // destroyed the one thing the operator needed to read.
+          ws.lastImport = r;
+          refresh();
+        } catch (e) {
+          // The API attaches the parsed body to the error. Showing only
+          // e.message loses the part that says what to fix.
+          if (e.body) { ws.lastImport = e.body; go("golive"); }
+          else if (out) out.innerHTML = '<div class="login-err">' + esc(e.message) + "</div>";
+        }
+        return;
+      }
+      if (act === "imp-purge") {
+        toast("Run `node server/purge-demo.js` on the server. Not exposed over the API on purpose.");
+        return;
+      }
+    }));
+
+    $$("[data-ack]").forEach((b) => b.addEventListener("click", async () => {
+      try {
+        await WS.api("POST", "/v1/alerts/" + b.dataset.ack + "/ack");
+        refresh();
+      } catch (e) { toast("Could not acknowledge"); }
+    }));
+  };
+
+  /* An import report that names every rejected row. The feature whose absence
+   * produces "I imported 5,000 contacts and 1,200 vanished". */
+  function importReport(r) {
+    if (r && r.error === "missing_required_columns") {
+      return '<div class="login-err">Missing required columns: ' + esc((r.missing || []).join(", ")) +
+        '</div><div style="font-size:12px;color:var(--muted);margin-top:8px">' + esc(r.message || "") + "</div>";
+    }
+    const reasons = Object.entries(r.rejectedByReason || {});
+    return '<div class="stats" style="margin-bottom:12px">' +
+      tile("Accepted", num(r.accepted), "with a live consent basis", true) +
+      tile("Rejected", num(r.rejected), "nothing partial was written") +
+      tile("New contacts", num(r.inserted), "inserted") +
+      tile("Attached", num(r.attachedToExisting), "to existing records") +
+      "</div>" +
+      (r.verificationSkipped
+        ? '<div style="font-size:12px;color:var(--warn);margin-bottom:10px">' +
+          "Verification was skipped: no verifier is registered. This is reported, not assumed to have passed." +
+          "</div>" : "") +
+      (r.rejectedByReason && r.rejectedByReason.domain_cannot_receive_mail
+        ? '<div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.6;max-width:74ch">' +
+          "<b>" + num(r.rejectedByReason.domain_cannot_receive_mail) + " row(s) rejected because the domain " +
+          "has no MX record</b>, so it cannot receive mail at all. That is usually a typo in the domain, a " +
+          "parked domain, or a reserved test domain. If DNS is unavailable here rather than the domain being " +
+          "wrong, re-run with the deliverability check skipped." + "</div>" : "") +
+      (reasons.length ? '<span class="label">Why rows were rejected</span>' +
+        '<div class="bd" style="margin:8px 0 12px">' + reasons.map(([k, v]) =>
+          '<div class="r"><span class="n">' + esc(k.replace(/_/g, " ")) +
+          '</span><span class="t"><i style="width:' +
+          Math.round((v / Math.max(1, r.rejected)) * 100) + '%"></i></span>' +
+          '<span class="v">' + v + "</span></div>").join("") + "</div>" : "") +
+      ((r.rejectedRows || []).length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr>' +
+        "<th>Line</th><th>Email</th><th>Reason</th><th>Detail</th></tr></thead><tbody>" +
+        (r.rejectedRows || []).slice(0, 50).map((x) =>
+          '<tr><td data-l="LINE" class="num">' + x.line + '</td><td data-l="EMAIL">' + esc(x.email || "") +
+          '</td><td data-l="REASON">' + esc(x.reason) + '</td><td data-l="DETAIL">' +
+          '<span style="font-size:11px;color:var(--faint)">' + esc(String(x.detail || "").slice(0, 160)) +
+          "</span></td></tr>").join("") + "</tbody></table></div>" +
+        (r.rejectedTruncated ? '<div style="font-size:11px;color:var(--faint);margin-top:6px">' +
+          "First 500 shown.</div>" : "") : "");
+  }
 
   // ---------------------------------------------------------- OVERVIEW
   VIEWS.overview = function () {
