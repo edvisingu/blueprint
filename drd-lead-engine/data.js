@@ -101,10 +101,20 @@ window.DRD_DATA = (function () {
     { country: "Netherlands", region: "Randstad", cities: ["Amsterdam", "Rotterdam"] },
   ];
 
-  const SPORT_WORD = ["Soccer Club", "Hockey Association", "Basketball Academy", "Athletic Club",
-    "Sports Academy", "Football Program", "Volleyball Club", "Lacrosse Club", "Baseball Academy", "Athletics"];
-  const SCHOOL_WORD = ["High School Athletics", "Secondary Athletics", "Prep Athletics",
-    "Collegiate Athletics", "District Athletics"];
+  // Each suffix carries the sub-category it implies, so a club named "... Football
+  // Program" is never labelled a basketball program. Drawing the two independently
+  // produced self-contradicting records, which reads as synthetic data.
+  const SPORT_WORD = [
+    ["Soccer Club", "Soccer Club"], ["Hockey Association", "Hockey Association"],
+    ["Basketball Academy", "Basketball Program"], ["Athletic Club", "Multi-Sport Academy"],
+    ["Sports Academy", "Multi-Sport Academy"], ["Football Program", "Football Program"],
+    ["Volleyball Club", "Volleyball Club"], ["Lacrosse Club", "Lacrosse Club"],
+    ["Baseball Academy", "Baseball Program"], ["Athletics", "Multi-Sport Academy"],
+    ["Soccer Academy", "Soccer Club"], ["Hockey Club", "Hockey Association"]];
+  const SCHOOL_WORD = [
+    ["High School Athletics", "High School Athletics"], ["Secondary Athletics", "High School Athletics"],
+    ["Prep Athletics", "Prep School Program"], ["Collegiate Athletics", "College Athletics"],
+    ["District Athletics", "District Athletics"]];
   const EDU_A = ["Northgate", "Lakeridge", "Fairmount", "Brookvale", "Sterling", "Crestwood", "Ashford", "Kingsmere",
     "Rowanhill", "Templeton", "Westbourne", "Highfield", "Claremont", "Stonebridge", "Elmwood", "Redcliff",
     "Thornbury", "Grantham", "Whitfield", "Ravenscourt", "Oakmere", "Bellhaven", "Coldwater", "Fernbrook",
@@ -157,11 +167,13 @@ window.DRD_DATA = (function () {
   while (companies.length < TARGET_COMPANIES && guard++ < 20000) {
     const v = pick(V_BAG);
     const g = pick(G_BAG);
-    let name;
+    let name, impliedSub = null;
     if (v.industry === "Sports Club") {
-      name = pick(EDU_A) + " " + pick(SPORT_WORD);
+      const w = pick(SPORT_WORD);
+      name = pick(EDU_A) + " " + w[0]; impliedSub = w[1];
     } else if (v.industry === "School Athletics") {
-      name = pick(EDU_A) + " " + pick(SCHOOL_WORD);
+      const w = pick(SCHOOL_WORD);
+      name = pick(EDU_A) + " " + w[0]; impliedSub = w[1];
     } else if (v.industry === "Higher Education") {
       name = pick(EDU_A) + " " + pick(["University", "College", "Polytechnic", "Institute", "College of Applied Arts"]);
     } else {
@@ -171,7 +183,7 @@ window.DRD_DATA = (function () {
     usedNames.add(name);
 
     const size = (SIZE_FOR[v.industry] || defaultSize)();
-    const sub = pick(v.subs);
+    const sub = impliedSub || pick(v.subs);
     const city = pick(g.cities);
     const id = "co_" + (companies.length + 1);
     const funded = rnd() > 0.62;

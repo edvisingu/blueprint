@@ -96,15 +96,25 @@
   // ---- brand scoping ----------------------------------------------------
   // Pipeline views show only the active brand. The portfolio brand (DRDverse)
   // is a roll-up, so it deliberately sees every brand at once.
-  function brand() { return ws.brands.find((b) => b.id === ws.activeBrand) || ws.brands[0]; }
+  // Defensive by design: a missing or empty brand list must degrade to the seed
+  // definitions rather than throw, because this runs before the first paint of
+  // every view and an exception here blanks the whole page.
+  function brandList() {
+    if (ws && Array.isArray(ws.brands) && ws.brands.length) return ws.brands;
+    return (window.DRD_DATA && window.DRD_DATA.brands) || [];
+  }
+  function brand() {
+    const list = brandList();
+    return list.find((b) => b.id === (ws && ws.activeBrand)) || list[0] || {};
+  }
   function isRollup() { return brand().role === "portfolio"; }
   function bIcps() { return brand().icps || []; }
-  function allIcps() { return ws.brands.reduce((a, b) => a.concat(b.icps || []), []); }
+  function allIcps() { return brandList().reduce((a, b) => a.concat(b.icps || []), []); }
   const inBrand = (x) => isRollup() || x.brandId === ws.activeBrand;
   function camps() { return ws.campaigns.filter(inBrand); }
   function convos() { return ws.conversations.filter(inBrand); }
   function meets() { return ws.meetings.filter(inBrand); }
-  function brandOf(id) { return ws.brands.find((b) => b.id === id) || { name: id, icps: [] }; }
+  function brandOf(id) { return brandList().find((b) => b.id === id) || { name: id, icps: [] }; }
 
   // CSV export — uses the hosted downloads capability, falls back to a blob.
   async function exportCSV(filename, rows) {
@@ -160,7 +170,7 @@
     const html =
       "<label>Brand</label>" +
       '<select id="brandsel">' +
-        ws.brands.map((x) =>
+        brandList().map((x) =>
           '<option value="' + x.id + '" ' + (x.id === ws.activeBrand ? "selected" : "") + ">" +
           esc(x.name) + "</option>").join("") +
       "</select>" +
@@ -260,7 +270,7 @@
       '<th>Brand</th><th>Outbound fit</th><th class="right">ICPs</th><th class="right">Campaigns</th>' +
       '<th class="right">Sent</th><th class="right">Replies</th><th class="right">Hot</th><th class="right">Meetings</th>' +
       "</tr></thead><tbody>" +
-      ws.brands.filter((b) => b.role !== "portfolio").map((b) => {
+      brandList().filter((b) => b.role !== "portfolio").map((b) => {
         const cs = ws.campaigns.filter((c) => c.brandId === b.id);
         const cv = ws.conversations.filter((c) => c.brandId === b.id);
         const mt = ws.meetings.filter((m) => m.brandId === b.id);

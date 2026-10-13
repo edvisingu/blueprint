@@ -657,7 +657,6 @@ pre.code {
   table.tbl tbody tr { padding: 10px 12px; margin-bottom: 7px; }
   table.tbl td { padding: 3px 0; }
 }
-
 </style>
 <div class="app">
     <aside class="sidebar">
@@ -802,10 +801,20 @@ window.DRD_DATA = (function () {
     { country: "Netherlands", region: "Randstad", cities: ["Amsterdam", "Rotterdam"] },
   ];
 
-  const SPORT_WORD = ["Soccer Club", "Hockey Association", "Basketball Academy", "Athletic Club",
-    "Sports Academy", "Football Program", "Volleyball Club", "Lacrosse Club", "Baseball Academy", "Athletics"];
-  const SCHOOL_WORD = ["High School Athletics", "Secondary Athletics", "Prep Athletics",
-    "Collegiate Athletics", "District Athletics"];
+  // Each suffix carries the sub-category it implies, so a club named "... Football
+  // Program" is never labelled a basketball program. Drawing the two independently
+  // produced self-contradicting records, which reads as synthetic data.
+  const SPORT_WORD = [
+    ["Soccer Club", "Soccer Club"], ["Hockey Association", "Hockey Association"],
+    ["Basketball Academy", "Basketball Program"], ["Athletic Club", "Multi-Sport Academy"],
+    ["Sports Academy", "Multi-Sport Academy"], ["Football Program", "Football Program"],
+    ["Volleyball Club", "Volleyball Club"], ["Lacrosse Club", "Lacrosse Club"],
+    ["Baseball Academy", "Baseball Program"], ["Athletics", "Multi-Sport Academy"],
+    ["Soccer Academy", "Soccer Club"], ["Hockey Club", "Hockey Association"]];
+  const SCHOOL_WORD = [
+    ["High School Athletics", "High School Athletics"], ["Secondary Athletics", "High School Athletics"],
+    ["Prep Athletics", "Prep School Program"], ["Collegiate Athletics", "College Athletics"],
+    ["District Athletics", "District Athletics"]];
   const EDU_A = ["Northgate", "Lakeridge", "Fairmount", "Brookvale", "Sterling", "Crestwood", "Ashford", "Kingsmere",
     "Rowanhill", "Templeton", "Westbourne", "Highfield", "Claremont", "Stonebridge", "Elmwood", "Redcliff",
     "Thornbury", "Grantham", "Whitfield", "Ravenscourt", "Oakmere", "Bellhaven", "Coldwater", "Fernbrook",
@@ -858,11 +867,13 @@ window.DRD_DATA = (function () {
   while (companies.length < TARGET_COMPANIES && guard++ < 20000) {
     const v = pick(V_BAG);
     const g = pick(G_BAG);
-    let name;
+    let name, impliedSub = null;
     if (v.industry === "Sports Club") {
-      name = pick(EDU_A) + " " + pick(SPORT_WORD);
+      const w = pick(SPORT_WORD);
+      name = pick(EDU_A) + " " + w[0]; impliedSub = w[1];
     } else if (v.industry === "School Athletics") {
-      name = pick(EDU_A) + " " + pick(SCHOOL_WORD);
+      const w = pick(SCHOOL_WORD);
+      name = pick(EDU_A) + " " + w[0]; impliedSub = w[1];
     } else if (v.industry === "Higher Education") {
       name = pick(EDU_A) + " " + pick(["University", "College", "Polytechnic", "Institute", "College of Applied Arts"]);
     } else {
@@ -872,7 +883,7 @@ window.DRD_DATA = (function () {
     usedNames.add(name);
 
     const size = (SIZE_FOR[v.industry] || defaultSize)();
-    const sub = pick(v.subs);
+    const sub = impliedSub || pick(v.subs);
     const city = pick(g.cities);
     const id = "co_" + (companies.length + 1);
     const funded = rnd() > 0.62;
@@ -1154,7 +1165,6 @@ window.DRD_DATA = (function () {
     rnd,
   };
 })();
-
 </script>
 <script>
 /* Dr. D Lead Engineering System — intelligence engine.
@@ -1557,7 +1567,6 @@ window.DRD_ENGINE = (function () {
   return { parseQuery, searchCompanies, searchPeople, scoreCompany, deepResearch, lookalikes,
     segments, generateEmail, followUp, classifyReply, analytics, companyById, personById, TONES, INTENTS };
 })();
-
 </script>
 <script>
 /* Dr. D Lead Engineering System — workspace seed.
@@ -1569,6 +1578,11 @@ window.DRD_WORKSPACE = (function () {
   "use strict";
   const D = window.DRD_DATA, E = window.DRD_ENGINE;
   const KEY = "drd_workspace_v1";
+  // Bump SCHEMA whenever the stored shape gains a field the views require. A
+  // saved workspace from an older build is then discarded and rebuilt instead
+  // of being loaded half-formed, which is what blanked the page when
+  // multi-brand support landed without a bump.
+  const SCHEMA = 2;
   const DAY = 86400000;
 
   function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -1732,7 +1746,7 @@ window.DRD_WORKSPACE = (function () {
     ];
 
     return {
-      version: 1,
+      version: SCHEMA,
       activeBrand: "drdverse",
       brands: JSON.parse(JSON.stringify(D.brands)),
       profile: D.businessProfile,
@@ -1762,7 +1776,12 @@ window.DRD_WORKSPACE = (function () {
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) { const w = JSON.parse(raw); if (w && w.version === 1) return w; }
+      if (raw) {
+        const w = JSON.parse(raw);
+        // Both guards matter: the version catches a known-old save, the shape
+        // check catches one saved by a build that changed fields without a bump.
+        if (w && w.version === SCHEMA && Array.isArray(w.brands) && w.brands.length) return w;
+      }
     } catch (e) {}
     const w = build();
     save(w);
@@ -1812,7 +1831,12 @@ window.DRD_WORKSPACE = (function () {
     const seedLocal = build(); // reuse the presentational agent feed
 
     return {
-      version: 1, backend: true,
+      version: SCHEMA, backend: true,
+      // The brand portfolio is configuration, not transactional data, so it
+      // comes from the seed definitions in both modes. Without it every view
+      // that scopes by brand throws on first render.
+      activeBrand: "drdverse",
+      brands: JSON.parse(JSON.stringify(D.brands)),
       profile: project.profile || seedLocal.profile,
       icps: icps.data,
       campaigns: campaigns.data.map((c, i) => ({
@@ -1867,7 +1891,6 @@ window.DRD_WORKSPACE = (function () {
 
   return { load, save, reset, build, hasApi, hydrate, api, push, auth };
 })();
-
 </script>
 <script>
 /* Dr. D Lead Engineering System — application layer.
@@ -1968,15 +1991,25 @@ window.DRD_WORKSPACE = (function () {
   // ---- brand scoping ----------------------------------------------------
   // Pipeline views show only the active brand. The portfolio brand (DRDverse)
   // is a roll-up, so it deliberately sees every brand at once.
-  function brand() { return ws.brands.find((b) => b.id === ws.activeBrand) || ws.brands[0]; }
+  // Defensive by design: a missing or empty brand list must degrade to the seed
+  // definitions rather than throw, because this runs before the first paint of
+  // every view and an exception here blanks the whole page.
+  function brandList() {
+    if (ws && Array.isArray(ws.brands) && ws.brands.length) return ws.brands;
+    return (window.DRD_DATA && window.DRD_DATA.brands) || [];
+  }
+  function brand() {
+    const list = brandList();
+    return list.find((b) => b.id === (ws && ws.activeBrand)) || list[0] || {};
+  }
   function isRollup() { return brand().role === "portfolio"; }
   function bIcps() { return brand().icps || []; }
-  function allIcps() { return ws.brands.reduce((a, b) => a.concat(b.icps || []), []); }
+  function allIcps() { return brandList().reduce((a, b) => a.concat(b.icps || []), []); }
   const inBrand = (x) => isRollup() || x.brandId === ws.activeBrand;
   function camps() { return ws.campaigns.filter(inBrand); }
   function convos() { return ws.conversations.filter(inBrand); }
   function meets() { return ws.meetings.filter(inBrand); }
-  function brandOf(id) { return ws.brands.find((b) => b.id === id) || { name: id, icps: [] }; }
+  function brandOf(id) { return brandList().find((b) => b.id === id) || { name: id, icps: [] }; }
 
   // CSV export — uses the hosted downloads capability, falls back to a blob.
   async function exportCSV(filename, rows) {
@@ -2032,7 +2065,7 @@ window.DRD_WORKSPACE = (function () {
     const html =
       "<label>Brand</label>" +
       '<select id="brandsel">' +
-        ws.brands.map((x) =>
+        brandList().map((x) =>
           '<option value="' + x.id + '" ' + (x.id === ws.activeBrand ? "selected" : "") + ">" +
           esc(x.name) + "</option>").join("") +
       "</select>" +
@@ -2132,7 +2165,7 @@ window.DRD_WORKSPACE = (function () {
       '<th>Brand</th><th>Outbound fit</th><th class="right">ICPs</th><th class="right">Campaigns</th>' +
       '<th class="right">Sent</th><th class="right">Replies</th><th class="right">Hot</th><th class="right">Meetings</th>' +
       "</tr></thead><tbody>" +
-      ws.brands.filter((b) => b.role !== "portfolio").map((b) => {
+      brandList().filter((b) => b.role !== "portfolio").map((b) => {
         const cs = ws.campaigns.filter((c) => c.brandId === b.id);
         const cv = ws.conversations.filter((c) => c.brandId === b.id);
         const mt = ws.meetings.filter((m) => m.brandId === b.id);
@@ -3363,5 +3396,4 @@ window.DRD_WORKSPACE = (function () {
   }
   document.addEventListener("DOMContentLoaded", init);
 })();
-
 </script>

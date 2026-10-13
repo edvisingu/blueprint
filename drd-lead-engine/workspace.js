@@ -7,6 +7,11 @@ window.DRD_WORKSPACE = (function () {
   "use strict";
   const D = window.DRD_DATA, E = window.DRD_ENGINE;
   const KEY = "drd_workspace_v1";
+  // Bump SCHEMA whenever the stored shape gains a field the views require. A
+  // saved workspace from an older build is then discarded and rebuilt instead
+  // of being loaded half-formed, which is what blanked the page when
+  // multi-brand support landed without a bump.
+  const SCHEMA = 2;
   const DAY = 86400000;
 
   function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -170,7 +175,7 @@ window.DRD_WORKSPACE = (function () {
     ];
 
     return {
-      version: 1,
+      version: SCHEMA,
       activeBrand: "drdverse",
       brands: JSON.parse(JSON.stringify(D.brands)),
       profile: D.businessProfile,
@@ -200,7 +205,12 @@ window.DRD_WORKSPACE = (function () {
   function load() {
     try {
       const raw = localStorage.getItem(KEY);
-      if (raw) { const w = JSON.parse(raw); if (w && w.version === 1) return w; }
+      if (raw) {
+        const w = JSON.parse(raw);
+        // Both guards matter: the version catches a known-old save, the shape
+        // check catches one saved by a build that changed fields without a bump.
+        if (w && w.version === SCHEMA && Array.isArray(w.brands) && w.brands.length) return w;
+      }
     } catch (e) {}
     const w = build();
     save(w);
@@ -250,7 +260,12 @@ window.DRD_WORKSPACE = (function () {
     const seedLocal = build(); // reuse the presentational agent feed
 
     return {
-      version: 1, backend: true,
+      version: SCHEMA, backend: true,
+      // The brand portfolio is configuration, not transactional data, so it
+      // comes from the seed definitions in both modes. Without it every view
+      // that scopes by brand throws on first render.
+      activeBrand: "drdverse",
+      brands: JSON.parse(JSON.stringify(D.brands)),
       profile: project.profile || seedLocal.profile,
       icps: icps.data,
       campaigns: campaigns.data.map((c, i) => ({
