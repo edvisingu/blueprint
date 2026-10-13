@@ -307,6 +307,22 @@ const ADDED_COLUMNS = [
   ["jobs", "idempotency_key", "TEXT"],
   ["jobs", "priority", "INTEGER NOT NULL DEFAULT 0"],
   ["jobs", "repeat_every_ms", "INTEGER"],
+  // Sequence executor.
+  ["campaigns", "brand_id", "TEXT"],
+  ["campaigns", "send_window_json", "TEXT"],
+  ["campaign_leads", "exit_reason", "TEXT"],
+  ["campaign_leads", "exited_at", "INTEGER"],
+  ["campaign_leads", "last_sent_at", "INTEGER"],
+  // Pipeline fields worth having at this scale. Deliberately not probabilities
+  // or a weighted forecast: weighted forecasting assumes the law of large
+  // numbers and breaks below roughly 20 open deals, which is the likely steady
+  // state for a one-person operation. These four give velocity and staleness.
+  ["conversations", "stage", "TEXT NOT NULL DEFAULT 'New'"],
+  ["conversations", "stage_entered_at", "INTEGER"],
+  ["conversations", "last_activity_at", "INTEGER"],
+  ["conversations", "lost_reason", "TEXT"],
+  ["conversations", "next_action", "TEXT"],
+  ["conversations", "next_action_at", "INTEGER"],
   ["consents", "brand_id", "TEXT"],
   ["sends", "consent_id", "TEXT"],
   // Reply matching: the provider's thread id and the RFC 822 Message-ID we

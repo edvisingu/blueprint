@@ -1,0 +1,75 @@
+{
+  "brand": "drdsports",
+  "notes": [
+    "Cold outbound for DRD Sports. Two sequences, both aimed at the ORGANISATION:",
+    "clubs (owners, directors, technical directors) and school athletics (athletic",
+    "directors). Both buy the website and player-database build.",
+    "",
+    "PARENTS ARE DELIBERATELY NOT HERE. Dr. D's 1:1 coaching sells to parents, but a",
+    "parent's address is a personal address, not a business contact published in a",
+    "work role. The conspicuous-publication basis almost certainly does not reach it,",
+    "and cold-emailing individuals is a different legal question entirely. Parents",
+    "come through the club relationship or an express opt-in funnel, never from here.",
+    "",
+    "Copy rules applied: no guaranteed outcomes, no implied institutional endorsement,",
+    "no unverifiable geography claims, no em dashes, and a real way out in every step.",
+    "Three steps, not six. Research found nobody leaves a vendor over a missing",
+    "cold-email feature, but everybody notices a seventh follow-up."
+  ],
+  "send_window": {
+    "days": [1, 2, 3, 4],
+    "startHour": 8,
+    "endHour": 15,
+    "why": "Weekday mornings in the mailbox timezone. Monday to Thursday only: Friday afternoon mail to a club director gets read Monday at the bottom of a pile."
+  },
+  "sequences": {
+    "clubs": {
+      "name": "DRD Sports — clubs, player records and site",
+      "goal": "Book a 15 minute call",
+      "audience": "Club directors, presidents, technical directors at soccer, hockey, basketball and multi-sport clubs",
+      "steps": [
+        {
+          "step": 1,
+          "subject": "{{company}} player records",
+          "body": "Hi {{first_name}},\n\nI build player databases and websites for {{category|sports}} organisations. Most clubs I speak to are holding rosters, stats and family contact details across a few spreadsheets, with a website nobody can update without calling someone.\n\nWhat that build usually looks like:\n\n- One record per athlete: profile, stats, video, academic info\n- A site your coaches update themselves, no developer in the loop\n- A clean export an athlete and their family can send to a recruiter\n\nWorth 15 minutes to see whether it fits how {{company}} actually runs?\n\nAndre de Freitas\nDRD Sports"
+        },
+        {
+          "step": 2,
+          "delayHours": 72,
+          "subject": "Re: {{company}} player records",
+          "body": "Hi {{first_name}},\n\nOne thing that comes up with nearly every club: parents asking what NIL means for their kid, and nobody on staff wanting to be the one to answer it.\n\nI teach that side as well, separately from the build:\n\n- A plain-language session for parents and athletes on NIL and AI tools\n- The player record system that puts an athlete's case together without a coach writing it up by hand\n\nIf the timing is wrong, say so and I will stop here.\n\nAndre"
+        },
+        {
+          "step": 3,
+          "delayHours": 120,
+          "subject": "Closing the loop on {{company}}",
+          "body": "Hi {{first_name}},\n\nLeaving this with you. If a player database or a site your coaches can run themselves becomes useful to {{company}} later, reply and I will pick it up then.\n\nIf it is not relevant, no reply needed. I will not follow up again.\n\nAndre"
+        }
+      ]
+    },
+    "school_athletics": {
+      "name": "DRD Sports — school athletics, athlete records",
+      "goal": "Book a 15 minute call",
+      "audience": "Athletic directors and assistant athletic directors at secondary and prep programmes",
+      "steps": [
+        {
+          "step": 1,
+          "subject": "Athlete records at {{company}}",
+          "body": "Hi {{first_name}},\n\nI build athlete record systems and websites for athletic departments. The pattern I keep running into: eligibility, rosters and stats live in three different places, and when a student needs something for a recruiter it gets assembled by hand.\n\nWhat the build covers:\n\n- One athlete record across every team and season\n- Stats and eligibility in the same place as the roster\n- A site your coaches maintain without going through IT\n\nIs that worth 15 minutes of your time?\n\nAndre de Freitas\nDRD Sports"
+        },
+        {
+          "step": 2,
+          "delayHours": 72,
+          "subject": "Re: Athlete records at {{company}}",
+          "body": "Hi {{first_name}},\n\nThe other half of what I do, in case it is the more useful half for {{company}}:\n\n- Sessions for athletes and families on NIL and on using AI tools properly\n- Staff-facing guidance so coaches are not improvising answers to parents\n\nI run those independently of any build, so it does not have to be a package.\n\nIf this is not your file, tell me who owns it and I will go to them instead.\n\nAndre"
+        },
+        {
+          "step": 3,
+          "delayHours": 120,
+          "subject": "Closing the loop on {{company}}",
+          "body": "Hi {{first_name}},\n\nLeaving it here. If athlete records or the family-facing sessions come up at {{company}} down the line, reply to this and I will pick it up.\n\nOtherwise no reply needed, and I will not follow up again.\n\nAndre"
+        }
+      ]
+    }
+  }
+}

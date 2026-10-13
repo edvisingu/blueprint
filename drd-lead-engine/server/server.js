@@ -13,6 +13,7 @@ const importer = require("./importer.js");
 const readiness = require("./readiness.js");
 const runner = require("./runner.js");
 const replies = require("./replies.js");
+const sequences = require("./sequences.js");
 const { hashToken } = require("./seed.js");
 const { DATA, ENGINE } = require("./shared.js");
 const AI = require("./ai.js");
@@ -633,6 +634,49 @@ function create(opts) {
       "</p><p>No further action is needed.</p></div>" };
   }, true);
 
+  // ---- sequences ---------------------------------------------------------
+  R("POST", /^\/v1\/campaigns\/([\w-]+)\/sequence$/, (ctx, m) => {
+    const seq = (ctx.body && ctx.body.sequence) || null;
+    const errors = sequences.validateSequence(seq);
+    if (errors.length) return { status: 400, body: { error: "invalid_sequence", errors } };
+    const c = db.prepare("SELECT id FROM campaigns WHERE id=?").get(m[1]);
+    if (!c) return { status: 404, body: { error: "campaign_not_found" } };
+    db.prepare("UPDATE campaigns SET sequence_json=?, send_window_json=COALESCE(?,send_window_json) WHERE id=?")
+      .run(JSON.stringify(seq), ctx.body.send_window ? JSON.stringify(ctx.body.send_window) : null, m[1]);
+    audit(ctx.org.id, ctx.actor, "campaign.sequence", m[1] + ": " + seq.length + " steps");
+    return { status: 200, body: { id: m[1], steps: seq.length } };
+  });
+
+  // Render every step against one real contact before committing a list to it.
+  R("POST", /^\/v1\/campaigns\/([\w-]+)\/preview$/, (ctx, m) => {
+    const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(m[1]);
+    if (!c) return { status: 404, body: { error: "campaign_not_found" } };
+    const contactId = ctx.body && ctx.body.contact_id;
+    if (!contactId) return { status: 400, body: { error: "missing_contact_id" } };
+    let seq = [];
+    try { seq = JSON.parse(c.sequence_json || "[]"); } catch (e) {}
+    const vars = sequences.contextFor(db, contactId, c.brand_id);
+    if (!vars) return { status: 404, body: { error: "contact_not_found" } };
+    const rendered = seq.map((s, i) => {
+      const subj = sequences.render(s.subject, vars);
+      const body = sequences.render(s.body, vars);
+      return { step: i + 1, delayHours: s.delayHours || 0, subject: subj.text, body: body.text,
+        missing: [...new Set([...subj.missing, ...body.missing])] };
+    });
+    return { status: 200, body: { data: rendered, available: Object.keys(vars),
+      ok: rendered.every((r) => r.missing.length === 0) } };
+  });
+
+  R("POST", /^\/v1\/campaigns\/([\w-]+)\/enrol$/, (ctx, m) => {
+    const ids = (ctx.body && ctx.body.contact_ids) || [];
+    if (!ids.length) return { status: 400, body: { error: "no_contact_ids" } };
+    const r = sequences.enrol(db, ctx.org.id, m[1], ids, { actor: ctx.actor, startAt: ctx.body.start_at });
+    return { status: r.ok ? 201 : 400, body: r };
+  });
+
+  R("GET", /^\/v1\/campaigns\/([\w-]+)\/status$/, (ctx, m) => ({
+    status: 200, body: { data: sequences.status(db, ctx.org.id, m[1]) } }));
+
   // ---- job queue and reply ingestion -------------------------------------
   R("GET", /^\/v1\/jobs$/, (ctx) => ({ status: 200, body: {
     data: db.prepare("SELECT id,kind,state,attempts,max_attempts,run_at,error,created_at,updated_at FROM jobs WHERE org_id=? ORDER BY updated_at DESC LIMIT 100").all(ctx.org.id),
@@ -897,6 +941,7 @@ if (require.main === module) {
   {
     const db0 = require("./db.js").open();
     replies.registerJobs(runner);
+    sequences.registerJobs(runner);
     runner.register("campaign.followup", async (payload, ctx) => {
       // Placeholder until sequence steps are built: record the intent to
       // follow up rather than silently dropping it.
