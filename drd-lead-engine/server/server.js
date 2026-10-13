@@ -11,6 +11,8 @@ const consent = require("./consent.js");
 const sending = require("./sending.js");
 const importer = require("./importer.js");
 const readiness = require("./readiness.js");
+const runner = require("./runner.js");
+const replies = require("./replies.js");
 const { hashToken } = require("./seed.js");
 const { DATA, ENGINE } = require("./shared.js");
 const AI = require("./ai.js");
@@ -631,6 +633,58 @@ function create(opts) {
       "</p><p>No further action is needed.</p></div>" };
   }, true);
 
+  // ---- job queue and reply ingestion -------------------------------------
+  R("GET", /^\/v1\/jobs$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT id,kind,state,attempts,max_attempts,run_at,error,created_at,updated_at FROM jobs WHERE org_id=? ORDER BY updated_at DESC LIMIT 100").all(ctx.org.id),
+    stats: runner.stats(db, ctx.org.id) } }));
+
+  R("POST", /^\/v1\/jobs$/, (ctx) => {
+    const b = ctx.body || {};
+    if (!b.kind) return { status: 400, body: { error: "missing_kind", handlers: runner.registered() } };
+    if (!runner.registered().includes(b.kind)) {
+      return { status: 400, body: { error: "unknown_kind", message:
+        "No handler is registered for '" + b.kind + "'.", handlers: runner.registered() } };
+    }
+    const r = runner.enqueue(db, ctx.org.id, b.kind, b.payload || {}, {
+      runAt: b.run_at, idempotencyKey: b.idempotency_key,
+      repeatEveryMs: b.repeat_every_ms, priority: b.priority, maxAttempts: b.max_attempts });
+    return { status: r.duplicate ? 200 : 201, body: r };
+  });
+
+  // Drain on demand. The background loop handles the normal case; this exists
+  // so a deployment with no long-lived process can still make progress, and so
+  // the queue can be stepped by hand while debugging.
+  R("POST", /^\/v1\/jobs\/drain$/, async (ctx) => ({
+    status: 200, body: await runner.drain(db, { batchSize: (ctx.body && ctx.body.batch) || 10 }) }));
+
+  R("POST", /^\/v1\/jobs\/([\w-]+)\/revive$/, (ctx, m) => {
+    const r = runner.revive(db, ctx.org.id, m[1]);
+    return { status: r.ok ? 200 : 409, body: r };
+  });
+
+  R("GET", /^\/v1\/replies$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare(
+      "SELECT id,gmail_id,from_email,from_name,subject,intent,confidence,auto_reply,opt_out," +
+      "matched_via,conversation_id,received_at FROM inbound_messages" +
+      " WHERE org_id=? ORDER BY received_at DESC LIMIT 100").all(ctx.org.id),
+    // Reply rate deliberately excludes auto-replies: counting out-of-office
+    // messages as replies hides a message that is not landing.
+    summary: db.prepare(
+      "SELECT COUNT(*) total," +
+      " SUM(CASE WHEN auto_reply=1 THEN 1 ELSE 0 END) auto_replies," +
+      " SUM(CASE WHEN auto_reply=0 THEN 1 ELSE 0 END) real_replies," +
+      " SUM(CASE WHEN opt_out=1 THEN 1 ELSE 0 END) opt_outs," +
+      " SUM(CASE WHEN send_id IS NULL THEN 1 ELSE 0 END) unmatched" +
+      " FROM inbound_messages WHERE org_id=?").get(ctx.org.id) } }));
+
+  R("POST", /^\/v1\/replies\/poll$/, async (ctx) => {
+    try {
+      return { status: 200, body: await replies.poll(db, ctx.org.id, ctx.body || {}) };
+    } catch (e) {
+      return { status: 503, body: { error: "poll_failed", message: e.message, permanent: !!e.permanent } };
+    }
+  });
+
   // ---- usage / analytics / audit ----------------------------------------
   R("GET", /^\/v1\/usage$/, (ctx) => {
     const org = db.prepare("SELECT * FROM organizations WHERE id=?").get(ctx.org.id);
@@ -836,6 +890,25 @@ if (require.main === module) {
     }
   } catch (e) {
     console.error("Database check failed:", e.message);
+  }
+
+  // Register job handlers before the loop starts, so an enqueued job never
+  // finds its kind unregistered and dies as a deployment error.
+  {
+    const db0 = require("./db.js").open();
+    replies.registerJobs(runner);
+    runner.register("campaign.followup", async (payload, ctx) => {
+      // Placeholder until sequence steps are built: record the intent to
+      // follow up rather than silently dropping it.
+      ctx.db.prepare("INSERT INTO audit_logs (id,org_id,actor,action,detail,at) VALUES (?,?,?,?,?,?)")
+        .run(require("./db.js").id("au"), ctx.orgId, "runner", "followup.due",
+          JSON.stringify(payload), Date.now());
+      return { noted: true };
+    });
+    const stop = runner.start(db0, { pollMs: 10000 });
+    process.on("SIGTERM", stop);
+    process.on("SIGINT", stop);
+    console.log("job runner started (handlers: " + runner.registered().join(", ") + ")");
   }
 
   const server = create();

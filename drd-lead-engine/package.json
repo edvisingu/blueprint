@@ -13,9 +13,12 @@
     "test": "NODE_NO_WARNINGS=1 node server/test.js",
     "stress": "NODE_NO_WARNINGS=1 node server/stress.js",
     "e2e": "NODE_NO_WARNINGS=1 node server/e2e.js",
-    "verify": "npm test && npm run stress && npm run e2e",
+    "verify": "npm test && npm run stress && npm run e2e && npm run test:gmail && npm run test:runner && npm run test:replies",
     "purge-demo": "NODE_NO_WARNINGS=1 node server/purge-demo.js",
-    "readiness": "NODE_NO_WARNINGS=1 node -e \"require('./server/readiness.js').evaluate(require('./server/db.js').open(),'org_root').then(r=>console.log(JSON.stringify(r,null,2)))\""
+    "readiness": "NODE_NO_WARNINGS=1 node -e \"require('./server/readiness.js').evaluate(require('./server/db.js').open(),'org_root').then(r=>console.log(JSON.stringify(r,null,2)))\"",
+    "test:gmail": "NODE_NO_WARNINGS=1 node server/gmail.test.js",
+    "test:runner": "NODE_NO_WARNINGS=1 node server/runner.test.js",
+    "test:replies": "NODE_NO_WARNINGS=1 node server/replies.test.js"
   },
   "optionalDependencies": {
     "@anthropic-ai/sdk": "^0.70.0"

@@ -253,7 +253,11 @@ function createTransport(opts) {
           " not set in the environment. Credentials never live in the database." };
       }
 
+      // Generate the Message-ID here rather than letting buildMime do it
+      // anonymously, so it can be returned and stored against the send.
+      const rfcId = messageId(String(msg.from || "").split("@")[1] || "localhost");
       const mime = buildMime({
+        messageId: rfcId,
         from: msg.from, fromName: msg.fromName,
         to: msg.to, toName: msg.toName,
         replyTo: o.replyTo,
@@ -284,7 +288,7 @@ function createTransport(opts) {
       if (res.status === 200 || res.status === 201) {
         const id = res.json && (res.json.id || (res.json.message && res.json.message.id));
         return {
-          ok: true, id,
+          ok: true, id, rfcMessageId: rfcId,
           // A draft is explicitly NOT a delivery. The sending layer records
           // this so a dashboard never counts drafts as sent mail.
           delivered: mode === "send",

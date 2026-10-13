@@ -384,8 +384,11 @@ function send(db, orgId, { contactId, campaignId, step, subject, body, brandId }
     // message that is never opened has reached nobody.
     const drafted = res.draft === true;
     const state = drafted ? "DRAFTED" : "SENT";
-    db.prepare("UPDATE sends SET state=?, provider_message_id=?, settled_at=? WHERE id=?")
-      .run(state, res.id || null, Date.now(), sid);
+    // Store both identifiers now: replies.js matches an incoming reply on the
+    // thread id first and the Message-ID second, and neither can be recovered
+    // after the fact.
+    db.prepare("UPDATE sends SET state=?, provider_message_id=?, provider_thread_id=?, rfc_message_id=?, settled_at=? WHERE id=?")
+      .run(state, res.id || null, res.threadId || null, res.rfcMessageId || null, Date.now(), sid);
     if (!drafted) enforceHealth(db, orgId, mb.id, at);
     return { id: sid, state, dryRun, drafted, mailbox: mb.address, messageId: res.id,
       threadId: res.threadId };

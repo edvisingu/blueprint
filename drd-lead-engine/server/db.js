@@ -247,6 +247,29 @@ CREATE TABLE IF NOT EXISTS imports (
   rows_accepted INTEGER NOT NULL DEFAULT 0, rows_rejected INTEGER NOT NULL DEFAULT 0,
   report_json TEXT, created_at INTEGER NOT NULL);
 
+CREATE TABLE IF NOT EXISTS inbound_messages (
+  id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+  -- Provider message id. UNIQUE per org makes ingestion idempotent at the
+  -- database level: re-running a poll cannot double-count a reply or inflate
+  -- the only metric that says whether the message works.
+  gmail_id TEXT NOT NULL,
+  thread_id TEXT,
+  send_id TEXT REFERENCES sends(id),
+  contact_id TEXT REFERENCES contacts(id),
+  conversation_id TEXT REFERENCES conversations(id),
+  from_email TEXT NOT NULL, from_name TEXT,
+  subject TEXT, body TEXT,
+  intent TEXT, confidence INTEGER,
+  -- An out-of-office is stored but is NOT a reply: counting auto-responders
+  -- as replies inflates reply rate and hides a message that is not landing.
+  auto_reply INTEGER NOT NULL DEFAULT 0,
+  opt_out INTEGER NOT NULL DEFAULT 0,
+  matched_via TEXT,
+  received_at INTEGER NOT NULL, created_at INTEGER NOT NULL,
+  UNIQUE(org_id, gmail_id));
+CREATE INDEX IF NOT EXISTS idx_in_contact ON inbound_messages(contact_id);
+CREATE INDEX IF NOT EXISTS idx_in_intent ON inbound_messages(intent);
+
 CREATE TABLE IF NOT EXISTS clearances (
   id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
   subject TEXT NOT NULL, granted_by TEXT NOT NULL,
@@ -276,8 +299,21 @@ const ADDED_COLUMNS = [
   ["organizations", "mailing_address", "TEXT"],
   ["organizations", "contact_email", "TEXT"],
   ["organizations", "contact_phone", "TEXT"],
+  // Job runner: durable scheduling, leases, retries, idempotency.
+  ["jobs", "run_at", "INTEGER NOT NULL DEFAULT 0"],
+  ["jobs", "lease_until", "INTEGER"],
+  ["jobs", "worker", "TEXT"],
+  ["jobs", "max_attempts", "INTEGER NOT NULL DEFAULT 5"],
+  ["jobs", "idempotency_key", "TEXT"],
+  ["jobs", "priority", "INTEGER NOT NULL DEFAULT 0"],
+  ["jobs", "repeat_every_ms", "INTEGER"],
   ["consents", "brand_id", "TEXT"],
   ["sends", "consent_id", "TEXT"],
+  // Reply matching: the provider's thread id and the RFC 822 Message-ID we
+  // generated. Thread id is the strongest signal; Message-ID survives a
+  // forward that loses the thread.
+  ["sends", "provider_thread_id", "TEXT"],
+  ["sends", "rfc_message_id", "TEXT"],
   ["sends", "brand_id", "TEXT"],
   ["suppressions", "channel", "TEXT NOT NULL DEFAULT 'email'"],
   ["suppressions", "honored_at", "INTEGER"],
@@ -292,10 +328,25 @@ function migrate(db) {
   }
 }
 
+/* Indexes over columns that migrate() adds. They cannot live in SCHEMA because
+ * the columns do not exist on first run, so they are created after migration. */
+const POST_MIGRATION = `
+CREATE INDEX IF NOT EXISTS idx_jobs_due ON jobs(state, run_at);
+CREATE INDEX IF NOT EXISTS idx_jobs_lease ON jobs(state, lease_until);
+-- Idempotency is enforced by the database, not by a check-then-insert in
+-- application code: two workers racing to enqueue the same follow-up must not
+-- both succeed, and a duplicate outbound email is visible to the prospect.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_idem ON jobs(org_id, idempotency_key)
+  WHERE idempotency_key IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_ct_origin ON contacts(origin);
+CREATE INDEX IF NOT EXISTS idx_sends_brand ON sends(brand_id, state);
+`;
+
 function open(file) {
   const db = new DatabaseSync(file || DEFAULT_DB);
   db.exec(SCHEMA);
   migrate(db);
+  db.exec(POST_MIGRATION);
   return db;
 }
 
