@@ -323,6 +323,8 @@ const ADDED_COLUMNS = [
   ["conversations", "lost_reason", "TEXT"],
   ["conversations", "next_action", "TEXT"],
   ["conversations", "next_action_at", "INTEGER"],
+  ["meetings", "external_id", "TEXT"],
+  ["meetings", "external_link", "TEXT"],
   ["consents", "brand_id", "TEXT"],
   ["sends", "consent_id", "TEXT"],
   // Reply matching: the provider's thread id and the RFC 822 Message-ID we

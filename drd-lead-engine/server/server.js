@@ -14,6 +14,7 @@ const readiness = require("./readiness.js");
 const runner = require("./runner.js");
 const replies = require("./replies.js");
 const sequences = require("./sequences.js");
+const calendar = require("./calendar.js");
 const { hashToken } = require("./seed.js");
 const { DATA, ENGINE } = require("./shared.js");
 const AI = require("./ai.js");
@@ -633,6 +634,84 @@ function create(opts) {
               : "This link has already been used.") +
       "</p><p>No further action is needed.</p></div>" };
   }, true);
+
+  // ---- meetings: slots and booking --------------------------------------
+  // Free/busy comes from Google every time. Offering slots computed from our
+  // own meetings table would double-book the real calendar.
+  R("GET", /^\/v1\/calendar\/slots$/, async (ctx) => {
+    try {
+      const r = await calendar.offer(db, ctx.org.id, {
+        calendarId: ctx.query.get("calendar_id") || undefined,
+        timezone: ctx.query.get("tz") || undefined,
+        durationMin: Number(ctx.query.get("duration") || 15),
+        days: Number(ctx.query.get("days") || 10),
+      });
+      return { status: 200, body: r };
+    } catch (e) {
+      return { status: 503, body: { error: "calendar_unavailable", message: e.message, permanent: !!e.permanent } };
+    }
+  });
+
+  R("POST", /^\/v1\/calendar\/book$/, async (ctx) => {
+    const b = ctx.body || {};
+    if (!b.contact_id || !b.start) return { status: 400, body: { error: "contact_id and start are required" } };
+    try {
+      const r = await calendar.book(db, ctx.org.id, {
+        contactId: b.contact_id, campaignId: b.campaign_id, start: Number(b.start),
+        durationMin: b.duration_min, calendarId: b.calendar_id, summary: b.summary,
+        description: b.description, actor: ctx.actor });
+      return { status: r.ok ? 201 : 409, body: r };
+    } catch (e) {
+      return { status: 503, body: { error: "calendar_unavailable", message: e.message } };
+    }
+  });
+
+  // ---- pipeline ----------------------------------------------------------
+  // Four fields, deliberately not probabilities or a weighted forecast:
+  // weighted forecasting assumes large numbers and breaks below roughly 20
+  // open deals, which is the steady state here. These give velocity and
+  // staleness, which are the questions a one-person pipeline actually has.
+  R("PATCH", /^\/v1\/conversations\/([\w-]+)\/pipeline$/, (ctx, m) => {
+    const b = ctx.body || {};
+    const STAGES = ["New", "Contacted", "Replied", "Meeting", "Proposal", "Won", "Lost"];
+    if (b.stage && !STAGES.includes(b.stage)) {
+      return { status: 400, body: { error: "bad_stage", allowed: STAGES } };
+    }
+    const row = db.prepare("SELECT * FROM conversations WHERE id=?").get(m[1]);
+    if (!row) return { status: 404, body: { error: "conversation_not_found" } };
+    const now = Date.now();
+    // stage_entered_at only moves when the stage actually changes, so time in
+    // stage stays meaningful after an unrelated edit.
+    const stageChanged = b.stage && b.stage !== row.stage;
+    db.prepare(
+      "UPDATE conversations SET stage=COALESCE(?,stage), stage_entered_at=?," +
+        " lost_reason=COALESCE(?,lost_reason), next_action=COALESCE(?,next_action)," +
+        " next_action_at=COALESCE(?,next_action_at), last_activity_at=? WHERE id=?"
+    ).run(b.stage || null, stageChanged ? now : (row.stage_entered_at || now),
+      b.lost_reason || null, b.next_action || null, b.next_action_at || null, now, m[1]);
+    audit(ctx.org.id, ctx.actor, "pipeline.update", m[1] + (b.stage ? " -> " + b.stage : ""));
+    return { status: 200, body: { id: m[1], stage: b.stage || row.stage } };
+  });
+
+  R("GET", /^\/v1\/pipeline$/, (ctx) => {
+    const now = Date.now();
+    const byStage = db.prepare(
+      "SELECT stage, COUNT(*) n, AVG(?-COALESCE(stage_entered_at,last_at)) avg_age_ms" +
+      " FROM conversations GROUP BY stage").all(now);
+    // Stale: no activity in 14 days and not closed. The number a one-person
+    // pipeline most needs, and the one no tool surfaces by default.
+    const stale = db.prepare(
+      "SELECT c.id, c.subject, c.stage, c.next_action, COALESCE(c.last_activity_at,c.last_at) last" +
+      " FROM conversations c WHERE c.stage NOT IN ('Won','Lost')" +
+      " AND COALESCE(c.last_activity_at,c.last_at) < ? ORDER BY last ASC LIMIT 50").all(now - 14 * 86400000);
+    const lost = db.prepare(
+      "SELECT lost_reason, COUNT(*) n FROM conversations WHERE stage='Lost' AND lost_reason IS NOT NULL" +
+      " GROUP BY lost_reason ORDER BY n DESC").all();
+    return { status: 200, body: { data: {
+      byStage: byStage.map((r) => ({ stage: r.stage, n: r.n,
+        avgDaysInStage: r.avg_age_ms ? Math.round(r.avg_age_ms / 86400000) : null })),
+      stale, lostReasons: lost } } };
+  });
 
   // ---- sequences ---------------------------------------------------------
   R("POST", /^\/v1\/campaigns\/([\w-]+)\/sequence$/, (ctx, m) => {
