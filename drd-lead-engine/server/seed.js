@@ -1,5 +1,21 @@
-/* Seeds a real database: org, user, API key, project, ICPs, the company/contact
- * graph, campaigns, conversations, meetings, suppressions and usage events. */
+/* Seeds a DEMONSTRATION database: org, user, API key, project, ICPs, the
+ * company/contact graph, campaigns, conversations, meetings, suppressions and
+ * usage events.
+ *
+ * EVERY company and contact this writes is GENERATED FICTION. They are tagged
+ * origin='demo' and the send path refuses them unconditionally, so they can
+ * never be emailed however they are later edited or added to a campaign.
+ *
+ * This is no longer run automatically. A production database starts empty and
+ * real contacts arrive through server/importer.js with their consent
+ * provenance. To build a demo database explicitly:
+ *
+ *   DRD_DEMO=1 npm run seed
+ *
+ * Without DRD_DEMO this refuses to run, so a deploy cannot fill a live
+ * database with fiction by accident. server/purge-demo.js removes demo rows
+ * from a database that already has them.
+ */
 const crypto = require("crypto");
 const { DATA, ENGINE } = require("./shared.js");
 const { open, id } = require("./db.js");
@@ -32,6 +48,15 @@ function hashToken(t) { return crypto.createHash("sha256").update(t).digest("hex
 
 function seed(dbFile, opts) {
   opts = opts || {};
+  // Opt-in guard. `force` exists for the test suite, which needs a known
+  // graph to assert against; nothing else should pass it.
+  if (!opts.force && !process.env.DRD_DEMO) {
+    throw new Error(
+      "seed.js writes generated sample data and will not run unless DRD_DEMO=1 is set. " +
+      "A production database starts empty: import real contacts with consent provenance instead " +
+      "(see server/importer.js and docs/GO-LIVE.md)."
+    );
+  }
   const db = open(dbFile);
   const rnd = mulberry32(4242);
   const pick = (a) => a[Math.floor(rnd() * a.length)];
@@ -45,7 +70,9 @@ function seed(dbFile, opts) {
     .forEach((t) => db.exec("DELETE FROM " + t));
 
   const orgId = "org_root", projectId = "prj_root";
-  db.prepare("INSERT INTO organizations (id,name,plan,credits_included,credits_used,autopilot,created_at) VALUES (?,?,?,?,?,?,?)")
+  // demo_data=1 drives the banner in the UI; send_armed=0 is the default and
+  // is never set by the seed.
+  db.prepare("INSERT INTO organizations (id,name,plan,credits_included,credits_used,autopilot,created_at,demo_data,send_armed) VALUES (?,?,?,?,?,?,?,1,0)")
     .run(orgId, "EdVisingU", "Growth", 5000, 0, 1, now - 90 * DAY);
   db.prepare("INSERT INTO users (id,org_id,email,name,role,created_at) VALUES (?,?,?,?,?,?)")
     .run("usr_root", orgId, "andre@edvisingu.ca", "Andre", "owner", now - 90 * DAY);
@@ -59,15 +86,15 @@ function seed(dbFile, opts) {
 
   // --- graph -----------------------------------------------------------
   const insCo = db.prepare(`INSERT INTO companies
-    (id,name,domain,industry,sub,country,region,city,size,revenue,founded,traffic,tech_json,signals_json,funding_json,description,pains_json)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    (id,name,domain,industry,sub,country,region,city,size,revenue,founded,traffic,tech_json,signals_json,funding_json,description,pains_json,origin)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,'demo')`);
   DATA.companies.forEach((c) => insCo.run(c.id, c.name, c.domain, c.industry, c.sub, c.country, c.region, c.city,
     c.size, c.revenue, c.founded, c.traffic, JSON.stringify(c.tech), JSON.stringify(c.signals),
     c.funding ? JSON.stringify(c.funding) : null, c.desc, JSON.stringify(c.pains || [])));
 
   const insCt = db.prepare(`INSERT INTO contacts
-    (id,company_id,name,title,seniority,department,email,email_status,verified,phone,linkedin,city,country)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`);
+    (id,company_id,name,title,seniority,department,email,email_status,verified,phone,linkedin,city,country,origin)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'demo')`);
   DATA.people.forEach((p) => insCt.run(p.id, p.companyId, p.name, p.title, p.seniority, p.department,
     p.email, p.emailStatus, p.verified ? 1 : 0, p.phone, p.linkedin, p.city, p.country));
 
@@ -188,6 +215,8 @@ function seed(dbFile, opts) {
 
 if (require.main === module) {
   const out = seed(process.argv[2], { apiToken: process.env.DRD_SEED_TOKEN });
+  console.log("NOTE: every company and contact above is generated sample data (origin='demo').");
+  console.log("      It can never be sent to. Run `node server/purge-demo.js` before going live.");
   console.log("seeded:", JSON.stringify(out.counts));
   console.log("api token:", out.token);
 }

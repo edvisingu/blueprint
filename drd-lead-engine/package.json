@@ -2,13 +2,20 @@
   "name": "drd-lead-engine",
   "version": "1.0.0",
   "private": true,
-  "description": "Dr. D Lead Engineering System — autonomous AI go-to-market platform",
-  "engines": { "node": ">=22.5" },
+  "description": "Dr. D Lead Engineering System \u2014 autonomous AI go-to-market platform",
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
-    "seed": "NODE_NO_WARNINGS=1 node server/seed.js server/drd.db",
+    "seed": "NODE_NO_WARNINGS=1 DRD_DEMO=1 node server/seed.js server/drd.db",
     "start": "NODE_NO_WARNINGS=1 node server/server.js",
     "dev": "npm run seed && npm start",
-    "test": "NODE_NO_WARNINGS=1 node server/test.js"
+    "test": "NODE_NO_WARNINGS=1 node server/test.js",
+    "stress": "NODE_NO_WARNINGS=1 node server/stress.js",
+    "e2e": "NODE_NO_WARNINGS=1 node server/e2e.js",
+    "verify": "npm test && npm run stress && npm run e2e",
+    "purge-demo": "NODE_NO_WARNINGS=1 node server/purge-demo.js",
+    "readiness": "NODE_NO_WARNINGS=1 node -e \"require('./server/readiness.js').evaluate(require('./server/db.js').open(),'org_root').then(r=>console.log(JSON.stringify(r,null,2)))\""
   },
   "optionalDependencies": {
     "@anthropic-ai/sdk": "^0.70.0"

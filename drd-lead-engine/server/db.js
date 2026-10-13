@@ -123,16 +123,179 @@ CREATE TABLE IF NOT EXISTS jobs (
   state TEXT NOT NULL DEFAULT 'QUEUED', attempts INTEGER NOT NULL DEFAULT 0,
   result_json TEXT, error TEXT, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_jobs_state ON jobs(state);
+
+/* ============================================================ GO-LIVE LAYER
+ * Everything below exists so this system can run on real contacts and real
+ * sends. Three invariants it enforces, in order of importance:
+ *
+ *   1. A generated (demo) contact can never be emailed. Demo rows carry
+ *      origin='demo' and the send path refuses them unconditionally, so
+ *      fiction cannot leak into a real campaign even by mistake.
+ *   2. A contact with no valid, unexpired consent basis can never be emailed.
+ *      Consent lives in its own audited table, not a boolean, because CASL
+ *      puts the burden of proof on the sender.
+ *   3. Every send attempt is written to "sends" BEFORE it is attempted, with
+ *      its outcome recorded after. That makes the denominator for bounce and
+ *      complaint rates "messages we actually sent", not "rows in a list".
+ *
+ * Nothing here is legal advice. The consent model reflects our reading of
+ * CASL and is pending qualified Canadian legal review; docs/COMPLIANCE.md
+ * records what is settled and what is not.
+ */
+
+CREATE TABLE IF NOT EXISTS consents (
+  id TEXT PRIMARY KEY,
+  contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  org_id TEXT NOT NULL REFERENCES organizations(id),
+  -- Consent is scoped to (contact x brand), not to the contact. CASL's
+  -- relevance test is applied per message, so the same institutional contact
+  -- may have a valid basis for one brand and none for another: an athletic
+  -- director's published address is relevant to a sports-websites pitch and
+  -- not to an unrelated credentials product. NULL means it applies to every
+  -- brand, which is correct for express consent given to the operator as a
+  -- whole. With five brands this is the most consequential scoping decision
+  -- in the schema.
+  brand_id TEXT,
+  -- express | implied_publication | implied_inquiry | implied_transaction | b2b_exemption
+  basis TEXT NOT NULL,
+  source_url TEXT,                     -- where the address was published/collected
+  source_note TEXT,                    -- how it was obtained, in words
+  evidence_ref TEXT,                   -- path/URL to captured evidence (screenshot, PDF)
+  role_relevance TEXT,                 -- why the message relates to this person's role
+  anti_solicitation_checked INTEGER NOT NULL DEFAULT 0,
+  captured_at INTEGER NOT NULL,
+  captured_by TEXT NOT NULL,
+  expires_at INTEGER,                  -- NULL = no clock (express, publication)
+  revoked_at INTEGER,
+  revoke_reason TEXT,
+  created_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS idx_cs_contact ON consents(contact_id);
+CREATE INDEX IF NOT EXISTS idx_cs_basis ON consents(basis);
+
+CREATE TABLE IF NOT EXISTS mailboxes (
+  id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+  address TEXT NOT NULL, display_name TEXT,
+  provider TEXT NOT NULL,              -- dryrun | smtp | google | microsoft
+  -- Credentials NEVER live here. This names the env var holding them.
+  credential_env TEXT,
+  daily_cap INTEGER NOT NULL DEFAULT 20,
+  min_gap_seconds INTEGER NOT NULL DEFAULT 180,
+  timezone TEXT NOT NULL DEFAULT 'UTC',
+  status TEXT NOT NULL DEFAULT 'Disabled',   -- Disabled | Active | Paused
+  pause_reason TEXT,
+  created_at INTEGER NOT NULL,
+  UNIQUE(org_id, address));
+
+CREATE TABLE IF NOT EXISTS domains (
+  id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+  domain TEXT NOT NULL,
+  spf_ok INTEGER, dkim_ok INTEGER, dmarc_ok INTEGER,
+  -- Alignment is the part most tools skip: a passing SPF record on a
+  -- different domain than the From header does not protect you.
+  alignment_ok INTEGER,
+  detail_json TEXT, checked_at INTEGER,
+  created_at INTEGER NOT NULL,
+  UNIQUE(org_id, domain));
+
+CREATE TABLE IF NOT EXISTS sends (
+  id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+  campaign_id TEXT REFERENCES campaigns(id) ON DELETE SET NULL,
+  contact_id TEXT NOT NULL REFERENCES contacts(id),
+  mailbox_id TEXT REFERENCES mailboxes(id),
+  step INTEGER NOT NULL DEFAULT 0,
+  -- QUEUED | SENT | SKIPPED | FAILED | BOUNCED | COMPLAINED | UNSUBSCRIBED
+  state TEXT NOT NULL DEFAULT 'QUEUED',
+  -- Why a send did not happen. Never silent: every skip is a row.
+  skip_reason TEXT,
+  subject TEXT, body TEXT,
+  dry_run INTEGER NOT NULL DEFAULT 1,
+  provider_message_id TEXT, error TEXT,
+  -- The consent record this send relied on, captured at send time. CompuFinder
+  -- failed on log granularity rather than consent quality: without knowing who
+  -- received which message when, it could not produce evidence of consent for
+  -- a given recipient. A per-send snapshot makes that reconstructable.
+  consent_id TEXT REFERENCES consents(id),
+  brand_id TEXT,
+  queued_at INTEGER NOT NULL, attempted_at INTEGER, settled_at INTEGER);
+CREATE INDEX IF NOT EXISTS idx_sn_state ON sends(state);
+CREATE INDEX IF NOT EXISTS idx_sn_mailbox_day ON sends(mailbox_id, attempted_at);
+CREATE INDEX IF NOT EXISTS idx_sn_contact ON sends(contact_id);
+
+CREATE TABLE IF NOT EXISTS unsubscribe_tokens (
+  token TEXT PRIMARY KEY,
+  org_id TEXT NOT NULL REFERENCES organizations(id),
+  contact_id TEXT NOT NULL REFERENCES contacts(id) ON DELETE CASCADE,
+  created_at INTEGER NOT NULL, used_at INTEGER);
+
+CREATE TABLE IF NOT EXISTS alerts (
+  id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+  kind TEXT NOT NULL,                  -- stable machine key, e.g. mailbox_paused
+  severity TEXT NOT NULL DEFAULT 'warn',   -- info | warn | critical
+  subject TEXT NOT NULL, detail TEXT,
+  state TEXT NOT NULL DEFAULT 'OPEN',  -- OPEN | ACK | RESOLVED
+  count INTEGER NOT NULL DEFAULT 1,
+  first_at INTEGER NOT NULL, last_at INTEGER NOT NULL,
+  UNIQUE(org_id, kind, subject));
+CREATE INDEX IF NOT EXISTS idx_al_state ON alerts(state);
+
+CREATE TABLE IF NOT EXISTS imports (
+  id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+  filename TEXT, rows_total INTEGER NOT NULL DEFAULT 0,
+  rows_accepted INTEGER NOT NULL DEFAULT 0, rows_rejected INTEGER NOT NULL DEFAULT 0,
+  report_json TEXT, created_at INTEGER NOT NULL);
+
+CREATE TABLE IF NOT EXISTS clearances (
+  id TEXT PRIMARY KEY, org_id TEXT NOT NULL REFERENCES organizations(id),
+  subject TEXT NOT NULL, granted_by TEXT NOT NULL,
+  recorded_by TEXT NOT NULL, note TEXT, at INTEGER NOT NULL);
 `;
 
+
 const DEFAULT_DB = process.env.DRD_DB_PATH || path.join(__dirname, "drd.db");
+
+/* Columns added to tables that already exist in deployed databases.
+ * CREATE TABLE IF NOT EXISTS will not alter them, so each is applied
+ * idempotently by inspecting pragma table_info first. */
+const ADDED_COLUMNS = [
+  // Provenance of every company/contact row. 'demo' rows are permanently
+  // ineligible to be sent to — see sending.js.
+  ["companies", "origin", "TEXT NOT NULL DEFAULT 'demo'"],
+  ["contacts", "origin", "TEXT NOT NULL DEFAULT 'demo'"],
+  ["contacts", "import_id", "TEXT"],
+  ["contacts", "verified_at", "INTEGER"],
+  ["contacts", "verify_result", "TEXT"],
+  // Arming is explicit and separate from autopilot: a system can be fully
+  // configured and still refuse to send until armed.
+  ["organizations", "send_armed", "INTEGER NOT NULL DEFAULT 0"],
+  ["organizations", "demo_data", "INTEGER NOT NULL DEFAULT 0"],
+  // CASL requires the sender to identify itself and give a mailing address.
+  ["organizations", "legal_name", "TEXT"],
+  ["organizations", "mailing_address", "TEXT"],
+  ["organizations", "contact_email", "TEXT"],
+  ["organizations", "contact_phone", "TEXT"],
+  ["consents", "brand_id", "TEXT"],
+  ["sends", "consent_id", "TEXT"],
+  ["sends", "brand_id", "TEXT"],
+  ["suppressions", "channel", "TEXT NOT NULL DEFAULT 'email'"],
+  ["suppressions", "honored_at", "INTEGER"],
+];
+
+function migrate(db) {
+  for (const [table, column, decl] of ADDED_COLUMNS) {
+    const cols = db.prepare("SELECT name FROM pragma_table_info(?)").all(table);
+    if (!cols.length) continue;                       // table not present yet
+    if (cols.some((c) => c.name === column)) continue; // already migrated
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
+  }
+}
 
 function open(file) {
   const db = new DatabaseSync(file || DEFAULT_DB);
   db.exec(SCHEMA);
+  migrate(db);
   return db;
 }
 
 const id = (p) => p + "_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
-module.exports = { open, id, SCHEMA, DEFAULT_DB };
+module.exports = { open, id, SCHEMA, DEFAULT_DB, migrate, ADDED_COLUMNS };

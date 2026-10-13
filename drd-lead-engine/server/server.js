@@ -7,6 +7,10 @@ const fs = require("fs");
 const path = require("path");
 const { URL } = require("url");
 const { open, id } = require("./db.js");
+const consent = require("./consent.js");
+const sending = require("./sending.js");
+const importer = require("./importer.js");
+const readiness = require("./readiness.js");
 const { hashToken } = require("./seed.js");
 const { DATA, ENGINE } = require("./shared.js");
 const AI = require("./ai.js");
@@ -492,6 +496,141 @@ function create(opts) {
     return { status: 200, body: { deleted: m[1] } };
   });
 
+  // ---- go-live: readiness, arming, consent, import, unsubscribe ----------
+  // Grouped together because they are one concern: turning a demo into a
+  // system that may contact real people. See docs/GO-LIVE.md.
+
+  R("GET", /^\/v1\/readiness$/, async (ctx) => ({
+    status: 200, body: await readiness.evaluate(db, ctx.org.id, { skipDns: ctx.query.get("skip_dns") === "1" }) }));
+
+  R("POST", /^\/v1\/readiness\/arm$/, async (ctx) => {
+    const on = ctx.body && ctx.body.armed === true;
+    const r = await readiness.arm(db, ctx.org.id, on, ctx.actor, { skipDns: ctx.body && ctx.body.skip_dns });
+    return { status: r.ok ? 200 : 409, body: r };
+  });
+
+  // Audit record of a decision taken outside this system. The system cannot
+  // grant itself clearance; this only records who did and when.
+  R("POST", /^\/v1\/clearance$/, (ctx) => {
+    const b = ctx.body || {};
+    if (!b.subject || !b.granted_by) {
+      return { status: 400, body: { error: "missing_fields",
+        message: "subject and granted_by are required: what was cleared, and by whom." } };
+    }
+    const cid = id("cl");
+    db.prepare("INSERT INTO clearances (id,org_id,subject,granted_by,recorded_by,note,at) VALUES (?,?,?,?,?,?,?)")
+      .run(cid, ctx.org.id, b.subject, b.granted_by, ctx.actor, b.note || null, b.at || Date.now());
+    audit(ctx.org.id, ctx.actor, "clearance.recorded", b.subject + " by " + b.granted_by);
+    return { status: 201, body: { id: cid } };
+  });
+
+  R("GET", /^\/v1\/clearance$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT * FROM clearances WHERE org_id=? ORDER BY at DESC").all(ctx.org.id) } }));
+
+  R("GET", /^\/v1\/consent\/bases$/, () => ({ status: 200, body: { data: consent.basisList() } }));
+
+  R("GET", /^\/v1\/consent\/coverage$/, (ctx) => ({
+    status: 200, body: { data: consent.coverage(db, ctx.org.id) } }));
+
+  R("GET", /^\/v1\/contacts\/([\w-]+)\/consent$/, (ctx, m) => ({ status: 200, body: {
+    data: db.prepare("SELECT * FROM consents WHERE contact_id=? AND org_id=? ORDER BY captured_at DESC")
+      .all(m[1], ctx.org.id),
+    eligibility: consent.eligibility(db, m[1], Date.now(), ctx.query.get("brand_id")) } }));
+
+  R("POST", /^\/v1\/contacts\/([\w-]+)\/consent$/, (ctx, m) => {
+    const b = Object.assign({}, ctx.body, { captured_by: ctx.actor });
+    const v = consent.validate(b);
+    if (!v.ok) return { status: 400, body: { error: "consent_invalid", errors: v.errors } };
+    const contact = db.prepare("SELECT id, origin FROM contacts WHERE id=?").get(m[1]);
+    if (!contact) return { status: 404, body: { error: "contact_not_found" } };
+    const cid = id("cs");
+    db.prepare("INSERT INTO consents (id,contact_id,org_id,brand_id,basis,source_url,source_note,evidence_ref," +
+      "role_relevance,anti_solicitation_checked,captured_at,captured_by,expires_at,created_at)" +
+      " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      .run(cid, m[1], ctx.org.id, b.brand_id || null, b.basis, b.source_url || null, b.source_note || null,
+        b.evidence_ref || null, b.role_relevance || null, b.anti_solicitation_checked ? 1 : 0,
+        Number(b.captured_at), ctx.actor, consent.expiryFor(b.basis, Number(b.captured_at)), Date.now());
+    audit(ctx.org.id, ctx.actor, "consent.recorded", m[1] + " " + b.basis);
+    return { status: 201, body: { id: cid } };
+  });
+
+  R("GET", /^\/v1\/import\/template$/, () => ({
+    status: 200, body: { columns: importer.COLUMNS, required: importer.REQUIRED, csv: importer.template() } }));
+
+  R("POST", /^\/v1\/import$/, async (ctx) => {
+    const csv = ctx.body && (ctx.body.csv || ctx.body.text);
+    if (!csv) return { status: 400, body: { error: "missing_csv",
+      message: "Post {csv: \"...\"}. GET /v1/import/template for the required columns." } };
+    const r = await importer.importCsv(db, ctx.org.id, csv, {
+      actor: ctx.actor, filename: (ctx.body && ctx.body.filename) || null,
+      skipMx: !!(ctx.body && ctx.body.skip_mx), skipVerify: !!(ctx.body && ctx.body.skip_verify) });
+    return { status: r.ok ? 201 : 400, body: r };
+  });
+
+  R("GET", /^\/v1\/imports$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT id,filename,rows_total,rows_accepted,rows_rejected,created_at FROM imports WHERE org_id=? ORDER BY created_at DESC LIMIT 50").all(ctx.org.id) } }));
+
+  R("GET", /^\/v1\/imports\/([\w-]+)$/, (ctx, m) => {
+    const r = db.prepare("SELECT * FROM imports WHERE id=? AND org_id=?").get(m[1], ctx.org.id);
+    if (!r) return { status: 404, body: { error: "import_not_found" } };
+    return { status: 200, body: { data: Object.assign({}, r, { report: JSON.parse(r.report_json || "{}") }) } };
+  });
+
+  R("GET", /^\/v1\/mailboxes$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT id,address,display_name,provider,daily_cap,min_gap_seconds,timezone,status,pause_reason,created_at FROM mailboxes WHERE org_id=? ORDER BY created_at").all(ctx.org.id)
+      .map((mb) => Object.assign(mb, { sent_today: sending.countSentToday(db, mb.id), rates: sending.rates(db, mb.id) })) } }));
+
+  R("POST", /^\/v1\/mailboxes$/, (ctx) => {
+    const b = ctx.body || {};
+    if (!b.address) return { status: 400, body: { error: "missing_address" } };
+    const mid = id("mb");
+    try {
+      db.prepare("INSERT INTO mailboxes (id,org_id,address,display_name,provider,credential_env,daily_cap,min_gap_seconds,timezone,status,created_at)" +
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+        .run(mid, ctx.org.id, b.address, b.display_name || null, b.provider || "dryrun",
+          b.credential_env || null, b.daily_cap || 20, b.min_gap_seconds || 180,
+          b.timezone || "UTC", b.status || "Disabled", Date.now());
+    } catch (e) { return { status: 409, body: { error: "mailbox_exists" } }; }
+    audit(ctx.org.id, ctx.actor, "mailbox.added", b.address);
+    return { status: 201, body: { id: mid } };
+  });
+
+  R("GET", /^\/v1\/alerts$/, (ctx) => ({ status: 200, body: { data: sending.openAlerts(db, ctx.org.id) } }));
+
+  R("POST", /^\/v1\/alerts\/([\w-]+)\/ack$/, (ctx, m) => {
+    const r = db.prepare("SELECT * FROM alerts WHERE id=? AND org_id=?").get(m[1], ctx.org.id);
+    if (!r) return { status: 404, body: { error: "alert_not_found" } };
+    db.prepare("UPDATE alerts SET state='ACK' WHERE id=?").run(m[1]);
+    return { status: 200, body: { id: m[1], state: "ACK" } };
+  });
+
+  R("GET", /^\/v1\/sends\/skip-report$/, (ctx) => ({ status: 200, body: {
+    data: sending.skipReport(db, ctx.org.id, ctx.query.get("since") ? Number(ctx.query.get("since")) : undefined) } }));
+
+  // Public, unauthenticated, and must stay that way: RFC 8058 one-click
+  // unsubscribe POSTs carry no cookies or credentials, and the link must work
+  // for a recipient who has never signed in.
+  R("POST", /^\/u\/([\w-]+)$/, (ctx, m) => {
+    const r = db.prepare("SELECT org_id FROM unsubscribe_tokens WHERE token=?").get(m[1]);
+    if (!r) return { status: 404, body: { error: "unknown_token" } };
+    const out = sending.unsubscribe(db, r.org_id, m[1]);
+    return { status: out.ok ? 200 : 400, body: out };
+  }, true);
+
+  R("GET", /^\/u\/([\w-]+)$/, (ctx, m) => {
+    const r = db.prepare("SELECT org_id FROM unsubscribe_tokens WHERE token=?").get(m[1]);
+    if (!r) return { status: 404, body: { error: "unknown_token" } };
+    const out = sending.unsubscribe(db, r.org_id, m[1]);
+    return { status: 200, html:
+      "<!doctype html><meta charset=utf8><meta name=viewport content='width=device-width,initial-scale=1'>" +
+      "<title>Unsubscribed</title><style>body{font:16px/1.6 system-ui;margin:0;display:grid;place-items:center;" +
+      "min-height:100vh;background:#0A1628;color:#F4F6FA}div{max-width:30rem;padding:2rem;text-align:center}" +
+      "b{color:#C9A84C}</style><div><h1>You've been unsubscribed</h1><p>" +
+      (out.ok ? "<b>" + (out.email || "") + "</b> has been removed from all of our mailing lists, across every brand we operate."
+              : "This link has already been used.") +
+      "</p><p>No further action is needed.</p></div>" };
+  }, true);
+
   // ---- usage / analytics / audit ----------------------------------------
   R("GET", /^\/v1\/usage$/, (ctx) => {
     const org = db.prepare("SELECT * FROM organizations WHERE id=?").get(ctx.org.id);
@@ -578,6 +717,16 @@ function create(opts) {
       res.end(payload);
       log(`${req.method} ${u.pathname} ${status} ${Date.now() - started}ms`);
     };
+    // A recipient clicking an unsubscribe link gets a page, not JSON.
+    const sendHtml = (status, html, extra) => {
+      res.writeHead(status, Object.assign({
+        "content-type": "text/html; charset=utf-8",
+        "content-length": Buffer.byteLength(html),
+        "cache-control": "no-store",
+      }, SEC, extra || {}));
+      res.end(html);
+      log(`${req.method} ${u.pathname} ${status} ${Date.now() - started}ms`);
+    };
 
     if (u.pathname === "/config.js") {
       // The browser authenticates with an httpOnly session cookie. No key is
@@ -587,7 +736,12 @@ function create(opts) {
       res.writeHead(200, Object.assign({ "content-type": "text/javascript", "cache-control": "no-store" }, SEC));
       return res.end(js);
     }
-    if (!u.pathname.startsWith("/v1/")) return serveStatic(req, res, u.pathname);
+    // Routed paths are the API under /v1/ plus the public unsubscribe handler
+    // at /u/<token>. Everything else is a static asset. The unsubscribe path
+    // is deliberately short and outside /v1/: it appears in the body of every
+    // message we send, and it must work for a recipient with no session.
+    const ROUTED = /^\/(v1\/|u\/)/;
+    if (!ROUTED.test(u.pathname)) return serveStatic(req, res, u.pathname);
 
     const route = routes.find((r) => r.method === req.method && r.pattern.test(u.pathname));
     if (!route) return send(404, { error: "not_found", path: u.pathname });
@@ -637,7 +791,8 @@ function create(opts) {
     try {
       const m = u.pathname.match(route.pattern);
       const out = await route.handler({ org, actor, body, query: u.searchParams, req }, m);
-      send(out.status, out.body, out.headers);
+      if (out.html !== undefined) sendHtml(out.status, out.html, out.headers);
+      else send(out.status, out.body, out.headers);
     } catch (e) {
       log("ERROR", u.pathname, e.message);
       send(500, { error: "internal_error", message: e.message });
@@ -652,20 +807,35 @@ if (require.main === module) {
   const port = +(process.env.PORT || 8787);
   const host = process.env.HOST || "0.0.0.0";
 
-  // First boot on a fresh volume: seed so the deployment is never an empty shell.
+  // An empty database is the CORRECT state for a live deployment. This used to
+  // autoseed generated companies and contacts "so the deployment is never an
+  // empty shell", which is precisely wrong once the system can contact real
+  // people: it fills production with fiction and makes every number on the
+  // dashboard meaningless. Demo data is now explicit and opt-in.
   try {
     const { DEFAULT_DB } = require("./db.js");
     const probe = require("./db.js").open();
     const n = probe.prepare("SELECT COUNT(*) n FROM companies").get().n;
+    const demo = probe.prepare("SELECT COUNT(*) n FROM contacts WHERE origin='demo'").get().n;
     probe.close();
-    if (n === 0) {
-      console.log("Empty database detected, seeding " + DEFAULT_DB + " ...");
+    if (n === 0 && process.env.DRD_DEMO) {
+      console.log("DRD_DEMO set and database empty — seeding sample data into " + DEFAULT_DB);
       const out = require("./seed.js").seed();
       console.log("Seeded:", JSON.stringify(out.counts));
+      console.log("NOTE: this data is generated and can never be sent to.");
       if (!process.env.DRD_ADMIN_PASSWORD) console.log("API token:", out.token);
+    } else if (n === 0) {
+      console.log("Database is empty. Import real contacts with consent provenance:");
+      console.log("  GET  /v1/import/template   then   POST /v1/import");
+      console.log("  (set DRD_DEMO=1 to seed generated sample data for a demo instead)");
+    }
+    if (demo > 0) {
+      console.log("WARNING: " + demo + " generated sample contacts present. They can never be");
+      console.log("         sent to, but they make analytics meaningless. Remove with:");
+      console.log("         node server/purge-demo.js");
     }
   } catch (e) {
-    console.error("Seed check failed:", e.message);
+    console.error("Database check failed:", e.message);
   }
 
   const server = create();

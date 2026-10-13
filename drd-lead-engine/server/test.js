@@ -35,7 +35,9 @@ async function api(method, p, body, token) {
 function section(t) { console.log("\n\x1b[1m" + t + "\x1b[0m"); }
 
 (async () => {
-  const s = seed(DB, { apiToken: "drd_live_testtoken" });
+  // force: the suite asserts against a known graph, so it needs the generated
+  // one. Everything it creates is origin='demo' and therefore unsendable.
+  const s = seed(DB, { apiToken: "drd_live_testtoken", force: true });
   TOKEN = s.token;
   console.log("seeded:", JSON.stringify(s.counts));
 
