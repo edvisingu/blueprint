@@ -79,3 +79,46 @@ settings and the passes re-running — `laws-lois.justice.gc.ca`, `crtc.gc.ca`,
   here fails closed.
 - No basis value exists for a purchased list, so it cannot be recorded even by
   a determined operator filling in a CSV.
+
+## Security findings fixed before go-live
+
+A security pass over the new code found three exploitable issues. All are
+fixed, each with a test that reproduces the original exploit and requires it
+to fail.
+
+**1. Unauthenticated secret and database exposure. HIGH.** Static files were
+served from the whole repository root, and static serving runs before the
+authentication check, so an unauthenticated request could fetch
+`/server/.dev-token` (a live API bearer token, which then granted full read and
+write access to every endpoint) and `/server/drd.db` (the entire database:
+contacts, message bodies, consent records, unsubscribe tokens). It worked in
+the hardened posture too, with public mode on and a password set, because the
+request never reached the auth check. Path traversal was never the hole;
+normalisation held. The hole was that everything legitimately inside the root
+was public. Static serving is now an allowlist of the seven files the browser
+client needs, and an unknown extension is refused rather than served as
+`application/octet-stream`.
+
+**2. Stored XSS on the public unsubscribe page. MEDIUM.** A recipient's own
+address was rendered back to them unescaped, and that address arrives from an
+imported CSV. The email validator rejects whitespace, `@` and `;` but permits
+angle brackets and quotes, so `"><script>alert(1)</script>@example.com` passes
+validation and reached the page intact. Every interpolation is now escaped.
+
+**3. Unauthenticated owner access from the local network. MEDIUM.** With no
+admin password configured, every request was treated as the owning
+organisation, and the listener bound every interface by default. Any peer on
+the same network could read the contact graph, change suppressions and arm
+sending. The fallback is now loopback-only, and the default bind is loopback
+whenever there is no password and no explicit public intent.
+
+Ruled out and worth recording so they are not re-litigated: SQL injection
+(every query binds its parameters; the one concatenated `LIKE` pattern is
+bound and its input is route-constrained), XSS in the browser client (every
+interpolated value is escaped; the unescaped ones are numbers), path traversal
+(normalisation plus an anchored prefix check), email header injection (the
+encoder base64-wraps anything outside printable ASCII, which excludes CR and
+LF), SSRF (hosts are compile-time constants and the one path segment is
+URL-encoded), and CSRF on the unsubscribe POST (the 24-byte token in the URL
+is the authorisation, so a cross-site post needs the secret it would be
+stealing).

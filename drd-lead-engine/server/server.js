@@ -21,6 +21,31 @@ const AI = require("./ai.js");
 
 const ROOT = path.join(__dirname, "..");
 
+/* Is this request from the machine itself? Used to confine the passwordless
+ * development fallback. ::ffff:127.0.0.1 is how an IPv4 loopback peer appears
+ * on a dual-stack socket, and missing the mapped form would make the check
+ * pass for nobody and the fallback useless. */
+function isLoopback(req) {
+  const a = (req && req.socket && req.socket.remoteAddress) || "";
+  if (a === "::1") return true;
+  // Anchored dotted-quad, not a "127." prefix: a prefix test also accepts
+  // 127.0.0.1.evil.test. remoteAddress is always an IP rather than a name, so
+  // that is not reachable in practice, but a security predicate should not
+  // depend on that being true elsewhere.
+  const v4 = /^(?:::ffff:)?(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(a);
+  if (!v4) return false;
+  const parts = v4.slice(1).map(Number);
+  if (parts.some((n) => n > 255)) return false;
+  return parts[0] === 127;
+}
+
+/* Response headers applied to static replies too, not only API replies. */
+const SEC_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "same-origin",
+  "cache-control": "no-store",
+};
+
 // ---------------------------------------------------------------- security
 // PUBLIC=1 (or NODE_ENV=production) means the server is internet-facing:
 // an admin password and a stable session secret then become mandatory.
@@ -922,15 +947,56 @@ function create(opts) {
   const MIME = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
     ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml" };
 
+  /* The exact files the browser client needs. An ALLOWLIST, not a directory.
+   *
+   * This used to serve anything under the repository root, and because static
+   * serving happens BEFORE authentication, that made two secrets fetchable by
+   * an unauthenticated request even in the hardened posture:
+   *
+   *   GET /server/.dev-token  -> a live API bearer token, which then grants
+   *                              full read and write access to every /v1 route
+   *   GET /server/drd.db      -> the whole database: contacts, message bodies,
+   *                              consent records, unsubscribe tokens
+   *
+   * Path traversal was never the hole; `path.normalize` plus the startsWith
+   * check held. The hole was that everything legitimately inside the root was
+   * public. An allowlist fails closed: a new file is unreachable until it is
+   * named here, which is the correct default for a directory that also holds
+   * the database.
+   */
+  const PUBLIC_FILES = new Set([
+    "index.html",
+    "app.js",
+    "engine.js",
+    "data.js",
+    "workspace.js",
+    "styles.css",
+    "drd-lead-engine.html",
+  ]);
+
   function serveStatic(req, res, pathname) {
-    const rel = pathname === "/" ? "/index.html" : pathname;
-    const file = path.join(ROOT, path.normalize(rel).replace(/^(\.\.[/\\])+/, ""));
-    if (!file.startsWith(ROOT) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
-      res.writeHead(404, { "content-type": "text/plain" }); res.end("Not found"); return;
+    const rel = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+    // No directories, no nesting, no traversal to reason about: a single
+    // path segment that must appear in the allowlist.
+    if (!PUBLIC_FILES.has(rel)) {
+      res.writeHead(404, Object.assign({ "content-type": "text/plain" }, SEC_HEADERS));
+      return res.end("Not found");
     }
-    res.writeHead(200, Object.assign(
-      { "content-type": MIME[path.extname(file)] || "application/octet-stream" },
-      { "x-content-type-options": "nosniff", "referrer-policy": "same-origin" }));
+    const file = path.join(ROOT, rel);
+    // Belt and braces: the allowlist already forbids traversal, but a future
+    // edit to it should not be able to reintroduce one.
+    if (!file.startsWith(ROOT + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      res.writeHead(404, Object.assign({ "content-type": "text/plain" }, SEC_HEADERS));
+      return res.end("Not found");
+    }
+    const type = MIME[path.extname(file)];
+    if (!type) {
+      // Never fall back to application/octet-stream: an unknown type means an
+      // unexpected file, which should not be served at all.
+      res.writeHead(404, Object.assign({ "content-type": "text/plain" }, SEC_HEADERS));
+      return res.end("Not found");
+    }
+    res.writeHead(200, Object.assign({ "content-type": type }, SEC_HEADERS));
     fs.createReadStream(file).pipe(res);
   }
 
@@ -1011,8 +1077,13 @@ function create(opts) {
     } else if (verifySession(readCookie(req, COOKIE))) {
       org = db.prepare("SELECT * FROM organizations ORDER BY created_at LIMIT 1").get();
       actor = "browser"; rateKey = "session";
-    } else if (!ADMIN_PASSWORD && !PUBLIC) {
-      // Local development with no password set: treat the browser as the owner.
+    } else if (!ADMIN_PASSWORD && !PUBLIC && isLoopback(req)) {
+      // Local development with no password set: treat the browser as the
+      // owner. LOOPBACK ONLY. Without the address check this granted full
+      // owner access, unauthenticated, to anything that could reach the port
+      // — and the listener defaults to every interface, so that was the whole
+      // local network, with the power to read the contact graph, change
+      // suppressions and arm sending.
       org = db.prepare("SELECT * FROM organizations ORDER BY created_at LIMIT 1").get();
       actor = "local"; rateKey = "local";
     }
@@ -1056,7 +1127,12 @@ function create(opts) {
 
 if (require.main === module) {
   const port = +(process.env.PORT || 8787);
-  const host = process.env.HOST || "0.0.0.0";
+  // Default to loopback when there is no password and no explicit public
+  // intent. Binding every interface by default put an unauthenticated
+  // owner-access surface on the local network.
+  const defaultHost = (!process.env.DRD_ADMIN_PASSWORD && !process.env.DRD_PUBLIC)
+    ? "127.0.0.1" : "0.0.0.0";
+  const host = process.env.HOST || defaultHost;
 
   // An empty database is the CORRECT state for a live deployment. This used to
   // autoseed generated companies and contacts "so the deployment is never an
