@@ -26,6 +26,12 @@ window.DRD_ENGINE = (function () {
     "HealthTech": ["healthtech", "health tech", "healthcare", "clinical", "telehealth", "medical"],
     "Nonprofit": ["nonprofit", "non-profit", "charity", "foundation", "association"],
     "Cybersecurity": ["cybersecurity", "security", "infosec"],
+    "Sports Club": ["sports club", "sports clubs", "sport club", "club", "clubs", "soccer", "hockey",
+      "basketball", "volleyball", "lacrosse", "baseball", "academy", "academies", "travel team",
+      "travel teams", "youth sports", "athletic club", "sports organization", "sports organisation"],
+    "School Athletics": ["school athletics", "athletic department", "athletic departments", "athletics",
+      "high school sports", "prep program", "prep athletics", "college athletics", "interscholastic",
+      "athletic director", "nil"],
   };
   const TECH_WORDS = ["hubspot", "salesforce", "canvas lms", "canvas", "banner", "slate crm", "slate", "aws", "stripe", "snowflake", "segment", "react", "workday", "docebo", "okta", "zoom", "webflow", "figma", "plaid", "epic", "twilio", "qualtrics", "articulate"];
   const SIGNAL_PATTERNS = [

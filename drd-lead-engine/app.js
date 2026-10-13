@@ -53,6 +53,46 @@
   }
   function scoreCls(n) { return n >= 82 ? "hi" : n >= 62 ? "mid" : "lo"; }
 
+  // ---- icons -------------------------------------------------------------
+  // A single stroke set, drawn at one weight, instead of glyphs or emoji.
+  const PATHS = {
+    overview: '<path d="M4 13h7V4H4zM13 20h7v-9h-7zM4 20h7v-4H4zM13 8h7V4h-7z"/>',
+    agent: '<path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18 16l.8 2.2L21 19l-2.2.8L18 22l-.8-2.2L15 19l2.2-.8z"/>',
+    companies: '<path d="M4 20V7l8-4 8 4v13"/><path d="M9 20v-6h6v6"/><path d="M4 20h16"/>',
+    people: '<circle cx="9" cy="8" r="3"/><path d="M3 20v-1a5 5 0 015-5h2a5 5 0 015 5v1"/><path d="M16 5.2a3 3 0 010 5.6M18 14h.5a4 4 0 014 4v2"/>',
+    segments: '<path d="M12 3a9 9 0 109 9h-9z"/><path d="M12 3v9h9A9 9 0 0012 3z" opacity=".45"/>',
+    campaigns: '<path d="M4 12l16-8-5 16-3-6z"/><path d="M12 14l-8-2"/>',
+    inbox: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 8l9 6 9-6"/>',
+    hot: '<path d="M12 3s5 4.5 5 9a5 5 0 01-10 0c0-2 1-3.5 2-5 0 2 1 3 2 3s1-4-1-7z"/>',
+    meetings: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    analytics: '<path d="M4 20V11M10 20V5M16 20v-6M22 20H2"/>',
+    data: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/>',
+    billing: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20M6 15h4"/>',
+    api: '<path d="M9 7l-5 5 5 5M15 7l5 5-5 5"/>',
+    settings: '<path d="M5 7h14M5 12h14M5 17h14"/><circle cx="9" cy="7" r="2"/><circle cx="15" cy="12" r="2"/><circle cx="10" cy="17" r="2"/>',
+    search: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3"/>',
+    more: '<circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>',
+    down: '<path d="M12 4v12M7 11l5 5 5-5M4 20h16"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    play: '<path d="M7 4l12 8-12 8z"/>',
+    pause: '<path d="M8 5v14M16 5v14"/>',
+    copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/>',
+    similar: '<circle cx="8" cy="12" r="5"/><circle cx="16" cy="12" r="5" opacity=".5"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+    check: '<path d="M4 12.5l5 5L20 6.5"/>',
+    close: '<path d="M6 6l12 12M18 6L6 18"/>',
+    empty: '<circle cx="11" cy="11" r="7"/><path d="M20 20l-4.3-4.3M8 11h6"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    star: '<path d="M12 4l2.4 5.3 5.6.6-4.2 3.8 1.2 5.5L12 16.4 7 19.2l1.2-5.5L4 9.9l5.6-.6z"/>',
+  };
+  function ico(name, size) {
+    const p = PATHS[name]; if (!p) return "";
+    const n = size || 17;
+    return '<svg class="ic" width="' + n + '" height="' + n + '" viewBox="0 0 24 24" fill="none" ' +
+      'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ' +
+      'aria-hidden="true" focusable="false">' + p + "</svg>";
+  }
+
   // ---- brand scoping ----------------------------------------------------
   // Pipeline views show only the active brand. The portfolio brand (DRDverse)
   // is a roll-up, so it deliberately sees every brand at once.
@@ -94,30 +134,30 @@
   // ---------------------------------------------------------------- nav
   const NAV = [
     { g: "Command" },
-    { id: "overview", ic: "◆", t: "Overview" },
-    { id: "agent", ic: "✦", t: "AI Agent" },
+    { id: "overview", ic: "overview", t: "Overview" },
+    { id: "agent", ic: "agent", t: "AI Agent" },
     { g: "Prospecting" },
-    { id: "companies", ic: "▣", t: "Companies" },
-    { id: "people", ic: "◉", t: "People" },
-    { id: "segments", ic: "◈", t: "Segments" },
+    { id: "companies", ic: "companies", t: "Companies" },
+    { id: "people", ic: "people", t: "People" },
+    { id: "segments", ic: "segments", t: "Segments" },
     { g: "Engagement" },
-    { id: "campaigns", ic: "▶", t: "Campaigns" },
-    { id: "inbox", ic: "✉", t: "Inbox", badge: () => convos().filter((c) => c.status === "Need Reply").length },
-    { id: "hot", ic: "★", t: "Hot Leads", badge: () => convos().filter((c) => c.hot).length },
-    { id: "meetings", ic: "◷", t: "Meetings" },
+    { id: "campaigns", ic: "campaigns", t: "Campaigns" },
+    { id: "inbox", ic: "inbox", t: "Inbox", badge: () => convos().filter((c) => c.status === "Need Reply").length },
+    { id: "hot", ic: "hot", t: "Hot Leads", badge: () => convos().filter((c) => c.hot).length },
+    { id: "meetings", ic: "meetings", t: "Meetings" },
     { g: "Operations" },
-    { id: "analytics", ic: "▤", t: "Analytics" },
-    { id: "data", ic: "⛉", t: "Data & Compliance" },
-    { id: "billing", ic: "◐", t: "Billing" },
-    { id: "api", ic: "⟨⟩", t: "API" },
-    { id: "settings", ic: "⚙", t: "Settings" },
+    { id: "analytics", ic: "analytics", t: "Analytics" },
+    { id: "data", ic: "data", t: "Data & Compliance" },
+    { id: "billing", ic: "billing", t: "Billing" },
+    { id: "api", ic: "api", t: "API" },
+    { id: "settings", ic: "settings", t: "Settings" },
   ];
 
   function renderBrandSwitch() {
-    const el = $("#brandswitch");
-    if (!el) return;
+    const els = $$(".js-brandswitch");
+    if (!els.length) return;
     const b = brand();
-    el.innerHTML =
+    const html =
       "<label>Brand</label>" +
       '<select id="brandsel">' +
         ws.brands.map((x) =>
@@ -125,34 +165,70 @@
           esc(x.name) + "</option>").join("") +
       "</select>" +
       '<div class="fitline"><b>' + esc(b.fit) + "</b> fit for outbound \u00b7 " + esc(b.domain) + "</div>";
-    $("#brandsel").onchange = (e) => {
+    els.forEach((el, i) => {
+      el.innerHTML = html.replace('id="brandsel"', 'id="brandsel' + (i || "") + '"');
+    });
+    $$("[id^=brandsel]").forEach((sel) => (sel.onchange = (e) => {
       ws.activeBrand = e.target.value;
       state.inbox.active = null;
       state.company.results = null; state.person.results = null;
       save();
       toast("Switched to " + brand().name);
       renderBrandSwitch();
+      closeSheet();
       go(isRollup() && state.view !== "overview" ? "overview" : state.view);
-    };
+    }));
   }
 
   function renderNav() {
     renderBrandSwitch();
-    $("#nav").innerHTML = NAV.map((n) => {
+    const html = NAV.map((n) => {
       if (n.g) return '<div class="group">' + esc(n.g) + "</div>";
       const b = n.badge ? n.badge() : 0;
       return '<button data-nav="' + n.id + '" class="' + (state.view === n.id ? "on" : "") + '">' +
-        '<span class="ic">' + n.ic + "</span>" + esc(n.t) +
-        (b ? '<span class="badge' + (n.id === "inbox" ? "" : "") + '">' + b + "</span>" : "") + "</button>";
+        ico(n.ic) + "<span>" + esc(n.t) + "</span>" +
+        (b ? '<span class="badge num">' + b + "</span>" : "") + "</button>";
     }).join("");
-    $$("#nav button").forEach((b) => (b.onclick = () => go(b.dataset.nav)));
+    $$(".js-nav").forEach((el) => (el.innerHTML = html));
+    $$(".js-nav button").forEach((b) => (b.onclick = () => { closeSheet(); go(b.dataset.nav); }));
+    renderMobileBar();
 
     const c = ws.credits;
     const pct = Math.min(100, Math.round((c.used / c.included) * 100));
-    $("#sidefoot").innerHTML =
+    const footHtml =
       '<div class="plan"><div class="row"><span>' + esc(c.plan) + " plan</span><b>" + pct + '%</b></div>' +
       '<div class="bar"><i style="width:' + pct + '%"></i></div>' +
       '<div class="row"><span class="num">' + num(c.used) + " / " + num(c.included) + "</span><span>credits</span></div></div>";
+    $$(".js-sidefoot").forEach((el) => (el.innerHTML = footHtml));
+  }
+
+  // ---- mobile tab bar ----------------------------------------------------
+  const TABS = [
+    { id: "overview", ic: "overview", t: "Home" },
+    { id: "companies", ic: "companies", t: "Find" },
+    { id: "inbox", ic: "inbox", t: "Inbox", badge: () => convos().filter((c) => c.status === "Need Reply").length },
+    { id: "hot", ic: "hot", t: "Hot", badge: () => convos().filter((c) => c.hot).length },
+    { id: "__more", ic: "more", t: "More" },
+  ];
+  function renderMobileBar() {
+    const el = $("#mobilebar");
+    if (!el) return;
+    el.innerHTML = TABS.map((t) => {
+      const n = t.badge ? t.badge() : 0;
+      const on = t.id === "__more" ? "" : (state.view === t.id ? "on" : "");
+      return '<button data-tab="' + t.id + '" class="' + on + '">' + ico(t.ic, 20) +
+        "<span>" + esc(t.t) + "</span>" +
+        (n ? '<span class="badge num">' + n + "</span>" : "") + "</button>";
+    }).join("");
+    $$("#mobilebar button").forEach((b) => (b.onclick = () => {
+      if (b.dataset.tab === "__more") return openSheet();
+      closeSheet(); go(b.dataset.tab);
+    }));
+  }
+  function openSheet() { $("#sheet").classList.add("on"); $("#sheetveil").classList.add("on"); }
+  function closeSheet() {
+    const sh = $("#sheet"); if (!sh) return;
+    sh.classList.remove("on"); $("#sheetveil").classList.remove("on");
   }
 
   function go(view) {
@@ -203,7 +279,7 @@
       "<h2>" + (isRollup() ? "Every brand, at a glance" : esc(brand().name) + " \u00b7 at a glance") + "</h2>" +
       "<p>What the agent did, who replied, who is hot, and what it is learning.</p>" +
       '</div><div class="head-actions">' +
-      '<button class="btn ghost" data-act="run-agent">✦ Run agent cycle</button>' +
+      '<button class="btn ghost" data-act="run-agent">' + ico("agent") + 'Run agent cycle</button>' +
       '<button class="btn" data-nav2="campaigns">View campaigns</button></div></div>' +
 
       rollup +
@@ -238,7 +314,7 @@
 
         '<div class="stack">' +
           '<div class="card"><div class="card-h"><h3>What it is learning</h3></div><div class="card-b stack">' +
-            a.insights.map((i) => '<div style="font-size:12.5px;color:var(--muted);display:flex;gap:9px"><span style="color:var(--gold)">▸</span><span>' + esc(i) + "</span></div>").join("") +
+            a.insights.map((i) => '<div style="font-size:12.5px;color:var(--muted);display:flex;gap:9px"><span class="tick"></span><span>' + esc(i) + "</span></div>").join("") +
           "</div></div>" +
 
           '<div class="card"><div class="card-h"><h3>Hot leads</h3><span class="grow"></span>' +
@@ -317,8 +393,8 @@
     const p = b.profile;
     return '<div class="page-head"><div><h2>AI Agent</h2>' +
       "<p>What the agent understands about your business, the markets it selected, and how much control it has.</p></div>" +
-      '<div class="head-actions"><button class="btn ghost" data-act="reanalyze">↻ Re-analyze website</button>' +
-      '<button class="btn" data-act="run-agent">✦ Run agent cycle</button></div></div>' +
+      '<div class="head-actions"><button class="btn ghost" data-act="reanalyze">Re-analyze website</button>' +
+      '<button class="btn" data-act="run-agent">' + ico("agent") + 'Run agent cycle</button></div></div>' +
 
       '<div class="brandcard">' +
         '<div class="rowflex" style="justify-content:space-between;align-items:flex-start">' +
@@ -374,7 +450,7 @@
         '<div class="label" style="margin-bottom:8px">Describe who you are looking for</div>' +
         '<div style="font-size:12.5px;color:var(--muted);margin-bottom:10px">Plain language. It becomes a stored ICP for ' +
         esc(b.name) + ', and the criteria it extracts drive search.</div>' +
-        '<div class="searchbar" style="margin-bottom:0"><span class="ic">\u2726</span>' +
+        '<div class="searchbar" style="margin-bottom:0"' + ico("agent") +
         '<input id="icpdesc" placeholder="e.g. youth hockey clubs in Ontario with more than 20 staff" />' +
         '<button class="btn" id="icpadd">Add ICP</button></div></div>' +
 
@@ -388,7 +464,7 @@
               '<div class="chips" style="margin-top:9px">' + i.buyers.map((b) => '<span class="chip">' + esc(b) + "</span>").join("") + "</div>" +
             "</div>" +
             '<div style="display:flex;flex-direction:column;gap:6px">' +
-              '<button class="btn sm ' + (i.approved ? "ghost" : "") + '" data-icp="' + i.id + '">' + (i.approved ? "✓ Approved" : "Approve") + "</button>" +
+              '<button class="btn sm ' + (i.approved ? "ghost" : "") + '" data-icp="' + i.id + '">' + (i.approved ? ico("check", 14) + "Approved" : "Approve") + "</button>" +
               '<button class="btn ghost sm" data-icpsearch="' + i.id + '">Find companies</button>' +
             "</div></div>").join("") +
         "</div></div>";
@@ -452,12 +528,12 @@
     return '<div class="page-head"><div><h2>Company search</h2>' +
       "<p>Describe the accounts you want in plain language. The agent converts it into structured criteria.</p></div>" +
       (r ? '<div class="head-actions">' +
-        '<button class="btn ghost" data-act="exp-co">⬇ Export CSV</button>' +
-        '<button class="btn" data-act="add-camp">＋ Add selected to campaign</button></div>' : "") +
+        '<button class="btn ghost" data-act="exp-co">' + ico("down") + 'Export CSV</button>' +
+        '<button class="btn" data-act="add-camp">' + ico("plus") + 'Add selected to campaign</button></div>' : "") +
       "</div>" +
-      '<div class="searchbar"><span class="ic">⌕</span>' +
+      '<div class="searchbar">' + ico("search") +
       '<input id="coq" value="' + esc(state.company.query) + '" placeholder="e.g. Canadian colleges with more than 200 employees that use Canvas LMS" />' +
-      '<button class="btn" id="cogo">Search ✦</button></div>' +
+      '<button class="btn" id="cogo">Search</button></div>' +
       (r ? "" : '<div class="examples">' + [
         "Ontario colleges with more than 200 employees",
         "EdTech companies in Canada that use HubSpot",
@@ -468,7 +544,7 @@
       '<div id="cores">' + (r ? companyResults() : emptySearch("companies")) + "</div>";
   };
   function emptySearch(kind) {
-    return '<div class="empty"><div class="big">⌕</div><b>Describe your ideal ' + kind.slice(0, -1) + " profile</b>" +
+    return '<div class="empty"><div class="big">' + ico("search", 30) + '</div><b>Describe your ideal ' + kind.slice(0, -1) + " profile</b>" +
       "<div>The agent parses geography, size, industry, technology and buying signals from plain language.</div></div>";
   }
   function companyResults() {
@@ -482,14 +558,14 @@
           '<tr data-co="' + c.id + '">' +
           '<td><input type="checkbox" class="checkbox" data-selco="' + c.id + '" ' + (sel.has(c.id) ? "checked" : "") + "></td>" +
           '<td><div class="prime">' + esc(c.name) + '</div><div class="sub">' + esc(c.domain) + "</div></td>" +
-          "<td>" + esc(c.industry) + '<div class="sub">' + esc(c.sub) + "</div></td>" +
-          "<td>" + esc(c.city) + '<div class="sub">' + esc(c.country) + "</div></td>" +
-          '<td class="right num">' + num(c.size) + "</td>" +
-          '<td>' + (c.signals.length ? '<span class="pill warn">' + esc(c.signals[0]) + "</span>" + (c.signals.length > 1 ? ' <span class="chip">+' + (c.signals.length - 1) + "</span>" : "") : '<span style="color:var(--faint)">—</span>') + "</td>" +
-          '<td class="right num">' + c.contactCount + "</td>" +
-          '<td class="right"><span class="score ' + scoreCls(c._score) + '"><b>' + c._score + "</b><span>/100</span></span></td>" +
+          '<td data-l="Industry">' + esc(c.industry) + '<div class="sub">' + esc(c.sub) + "</div></td>" +
+          '<td data-l="Location">' + esc(c.city) + '<div class="sub">' + esc(c.country) + "</div></td>" +
+          '<td class="right num" data-l="Staff">' + num(c.size) + "</td>" +
+          '<td data-l="Signals">' + (c.signals.length ? '<span class="pill warn">' + esc(c.signals[0]) + "</span>" + (c.signals.length > 1 ? ' <span class="chip">+' + (c.signals.length - 1) + "</span>" : "") : '<span style="color:var(--faint)">—</span>') + "</td>" +
+          '<td class="right num" data-l="Contacts">' + c.contactCount + "</td>" +
+          '<td class="right" data-l="Fit"><span class="score ' + scoreCls(c._score) + '"><b>' + c._score + "</b><span>/100</span></span></td>" +
           "</tr>").join("") +
-        "</tbody></table></div>" : '<div class="empty"><div class="big">∅</div><b>No companies match</b><div>Loosen a constraint — size and geography are the usual culprits.</div></div>');
+        "</tbody></table></div>" : '<div class="empty"><div class="big">' + ico("empty", 30) + '</div><b>No companies match</b><div>Loosen a constraint — size and geography are the usual culprits.</div></div>');
   }
   function critBar(c, n, kind) {
     const t = [];
@@ -557,10 +633,10 @@
     const r = state.person.results;
     return '<div class="page-head"><div><h2>People search</h2>' +
       "<p>Find the decision-makers inside those accounts by role, seniority, function and geography.</p></div>" +
-      (r ? '<div class="head-actions"><button class="btn ghost" data-act="exp-pe">⬇ Export CSV</button></div>' : "") + "</div>" +
-      '<div class="searchbar"><span class="ic">⌕</span>' +
+      (r ? '<div class="head-actions"><button class="btn ghost" data-act="exp-pe">' + ico("down") + 'Export CSV</button></div>' : "") + "</div>" +
+      '<div class="searchbar">' + ico("search") +
       '<input id="peq" value="' + esc(state.person.query) + '" placeholder="e.g. VP Academic at Canadian colleges over 200 employees" />' +
-      '<button class="btn" id="pego">Search ✦</button></div>' +
+      '<button class="btn" id="pego">Search</button></div>' +
       (r ? "" : '<div class="examples">' + [
         "Directors of teaching and learning at Ontario colleges",
         "Heads of L&D at companies over 500 employees",
@@ -577,14 +653,14 @@
         results.slice(0, 60).map((p) =>
           '<tr data-pe="' + p.id + '">' +
           '<td><div class="prime">' + esc(p.name) + '</div><div class="sub">' + esc(p.seniority) + " · " + esc(p.department) + "</div></td>" +
-          "<td>" + esc(p.title) + "</td>" +
-          '<td><div class="prime">' + esc(p.company.name) + '</div><div class="sub">' + num(p.company.size) + " emp · " + esc(p.company.industry) + "</div></td>" +
-          "<td>" + esc(p.city) + '<div class="sub">' + esc(p.country) + "</div></td>" +
-          '<td><div style="font-size:12px">' + esc(p.email) + "</div>" +
+          '<td data-l="Title">' + esc(p.title) + "</td>" +
+          '<td data-l="Company"><div class="prime">' + esc(p.company.name) + '</div><div class="sub">' + num(p.company.size) + " emp · " + esc(p.company.industry) + "</div></td>" +
+          '<td data-l="Location">' + esc(p.city) + '<div class="sub">' + esc(p.country) + "</div></td>" +
+          '<td data-l="Email"><div style="font-size:12px">' + esc(p.email) + "</div>" +
           '<span class="pill ' + (p.emailStatus === "Verified" ? "good" : p.emailStatus === "Catch-all" ? "warn" : "muted") + '">' + esc(p.emailStatus) + "</span></td>" +
-          '<td class="right"><span class="score ' + scoreCls(p._score) + '"><b>' + p._score + "</b><span>/100</span></span></td>" +
+          '<td class="right" data-l="Fit"><span class="score ' + scoreCls(p._score) + '"><b>' + p._score + "</b><span>/100</span></span></td>" +
           "</tr>").join("") + "</tbody></table></div>"
-        : '<div class="empty"><div class="big">∅</div><b>No people match</b><div>Try a broader title or drop the seniority filter.</div></div>');
+        : '<div class="empty"><div class="big">' + ico("empty", 30) + '</div><b>No people match</b><div>Try a broader title or drop the seniority filter.</div></div>');
   }
   WIRE.people = function () {
     const inp = $("#peq");
@@ -645,7 +721,7 @@
   VIEWS.campaigns = function () {
     return '<div class="page-head"><div><h2>Campaigns</h2>' +
       "<p>Each campaign runs one ICP through a personalized sequence. Autopilot can allocate volume and budget between them.</p></div>" +
-      '<div class="head-actions"><button class="btn" data-act="new-camp">＋ New campaign</button></div></div>' +
+      '<div class="head-actions"><button class="btn" data-act="new-camp">' + ico("plus") + 'New campaign</button></div></div>' +
       '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Campaign</th><th>Status</th><th class="right">Leads</th>' +
       '<th class="right">Sent</th><th class="right">Replies</th><th class="right">Hot</th><th class="right">Meetings</th>' +
       '<th class="right">Spend</th><th>Autopilot</th></tr></thead><tbody>' +
@@ -744,13 +820,13 @@
         '<textarea class="ta" id="replybox">' + esc(draftReply(c, p, co)) + "</textarea>" +
         '<div class="rowflex" style="margin-top:10px">' +
           '<button class="btn" data-send="' + c.id + '">Send reply</button>' +
-          '<button class="btn ghost" data-book="' + c.id + '">◷ Book meeting</button>' +
-          '<button class="btn ghost" data-regen="' + c.id + '">✦ Regenerate</button>' +
+          '<button class="btn ghost" data-book="' + c.id + '">' + ico("meetings") + 'Book meeting</button>' +
+          '<button class="btn ghost" data-regen="' + c.id + '">' + ico("agent") + 'Regenerate</button>' +
           '<span class="grow"></span>' +
           '<button class="btn danger sm" data-supp="' + c.id + '">Suppress</button>' +
         "</div>" +
-        (m.autoReplySafe ? '<div style="font-size:11.5px;color:var(--good);margin-top:9px">✓ Safe for autopilot to send without review.</div>'
-          : '<div style="font-size:11.5px;color:var(--warn);margin-top:9px">⚠ Held for human review — autopilot will not send this one.</div>') +
+        (m.autoReplySafe ? '<div style="font-size:11.5px;color:var(--good);margin-top:9px">' + ico("check", 13) + ' Safe for autopilot to send without review.</div>'
+          : '<div style="font-size:11.5px;color:var(--warn);margin-top:9px">Held for human review — autopilot will not send this one.</div>') +
       "</div>";
   }
   function draftReply(c, p, co) {
@@ -848,7 +924,7 @@
     const hot = convos().filter((c) => c.hot).sort((a, b) => b.intentMeta.confidence - a.intentMeta.confidence);
     return '<div class="page-head"><div><h2>Hot leads</h2>' +
       "<p>Prospects who replied with meaningful interest, ranked by classifier confidence, with the next action for each.</p></div>" +
-      '<div class="head-actions"><button class="btn ghost" data-act="exp-hot">⬇ Export CSV</button></div></div>' +
+      '<div class="head-actions"><button class="btn ghost" data-act="exp-hot">' + ico("down") + 'Export CSV</button></div></div>' +
       (hot.length ? '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Person</th><th>Company</th>' +
         "<th>Intent</th><th>Why it is hot</th><th>Recommended action</th><th>Meeting</th></tr></thead><tbody>" +
         hot.map((c) => {
@@ -863,7 +939,7 @@
             "<td>" + (m ? '<span class="pill good">' + esc(m.status) + "</span>" : '<span class="pill warn">Not booked</span>') + "</td>" +
             "</tr>";
         }).join("") + "</tbody></table></div>"
-        : '<div class="empty"><div class="big">★</div><b>No hot leads yet</b><div>They appear here as soon as a reply classifies as interested, pricing or a meeting request.</div></div>');
+        : '<div class="empty"><div class="big">' + ico("star", 30) + '</div><b>No hot leads yet</b><div>They appear here as soon as a reply classifies as interested, pricing or a meeting request.</div></div>');
   };
   WIRE.hot = function () {
     $$("[data-hot]").forEach((tr) => (tr.onclick = () => { state.inbox.active = tr.dataset.hot; state.inbox.filter = "All"; go("inbox"); }));
@@ -911,7 +987,7 @@
     const maxR = Math.max.apply(null, a.byCampaign.map((c) => c.replyRate).concat([1]));
     return '<div class="page-head"><div><h2>Analytics</h2>' +
       "<p>Outcome metrics, not vanity metrics: what it costs to produce a reply, a hot lead and a meeting.</p></div>" +
-      '<div class="head-actions"><button class="btn ghost" data-act="exp-an">⬇ Export CSV</button></div></div>' +
+      '<div class="head-actions"><button class="btn ghost" data-act="exp-an">' + ico("down") + 'Export CSV</button></div></div>' +
       '<div class="stats">' +
         tile("Emails sent", num(a.sent), "across all campaigns") +
         tile("Replies", num(a.replies), a.replyRate + "% reply rate") +
@@ -930,7 +1006,7 @@
             '<div class="val">' + c.replyRate + "%</div></div>").join("") +
         "</div></div></div>" +
         '<div class="card"><div class="card-h"><h3>AI recommendations</h3></div><div class="card-b stack">' +
-          a.insights.map((i) => '<div style="font-size:12.5px;color:var(--muted);display:flex;gap:9px"><span style="color:var(--gold)">▸</span><span>' + esc(i) + "</span></div>").join("") +
+          a.insights.map((i) => '<div style="font-size:12.5px;color:var(--muted);display:flex;gap:9px"><span class="tick"></span><span>' + esc(i) + "</span></div>").join("") +
         "</div></div>" +
       "</div>" +
       '<div class="card" style="margin-top:16px"><div class="card-h"><h3>Segment fit</h3></div><div class="card-b"><div class="bars">' +
@@ -952,7 +1028,7 @@
   VIEWS.data = function () {
     return '<div class="page-head"><div><h2>Data &amp; compliance</h2>' +
       "<p>Suppression is a first-class control. Nothing sends to a suppressed person or domain, in any campaign.</p></div>" +
-      '<div class="head-actions"><button class="btn ghost" data-act="exp-sup">⬇ Export list</button></div></div>' +
+      '<div class="head-actions"><button class="btn ghost" data-act="exp-sup">' + ico("down") + 'Export list</button></div></div>' +
       '<div class="stats">' +
         tile("Suppressed", num(ws.suppressions.length), "people + domains", true) +
         tile("Unsubscribes", num(ws.suppressions.filter((s) => /unsub/i.test(s.reason)).length), "honoured permanently") +
@@ -973,7 +1049,7 @@
             '<button class="btn" id="addsup">Add to list</button></div>' +
           '<div class="card pad"><div class="label" style="margin-bottom:12px">Sending safeguards</div>' +
             ["Unsubscribe detection and permanent suppression", "Duplicate prevention across campaigns", "Daily sending limits per mailbox", "Bounce monitoring and auto-pause", "Human handoff for ambiguous replies"]
-              .map((x) => '<div style="display:flex;gap:9px;font-size:12.5px;color:var(--muted);padding:5px 0"><span style="color:var(--good)">✓</span>' + esc(x) + "</div>").join("") +
+              .map((x) => '<div style="display:flex;gap:9px;font-size:12.5px;color:var(--muted);padding:5px 0"><span class="tick ok"></span>' + esc(x) + "</div>").join("") +
           "</div>" +
           '<div class="card"><div class="card-h"><h3>Audit log</h3></div><div class="card-b">' +
             (ws.audit.length ? ws.audit.slice(0, 12).map((a) =>
@@ -1044,7 +1120,7 @@
         (p.n === c.plan ? '<span class="pill gold">Current</span>' : "") + "</div>" +
         '<div style="font-size:26px;font-weight:800;margin:8px 0 2px">' + esc(p.p) + '<span style="font-size:12px;color:var(--faint);font-weight:500">/mo</span></div>' +
         '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">' + esc(p.inc) + " included</div>" +
-        p.f.map((f) => '<div style="display:flex;gap:8px;font-size:12.5px;color:var(--muted);padding:3px 0"><span style="color:var(--gold)">✓</span>' + esc(f) + "</div>").join("") +
+        p.f.map((f) => '<div style="display:flex;gap:8px;font-size:12.5px;color:var(--muted);padding:3px 0"><span class="tick"></span>' + esc(f) + "</div>").join("") +
         "</div>").join("") + "</div>";
   };
 
@@ -1094,7 +1170,7 @@
             "<div><div style=\"font-size:13px;font-weight:600\">" + esc(k.name) + "</div>" +
             '<code class="k">' + esc(k.prefix) + "…</code></div>" +
             '<span style="font-size:11.5px;color:var(--faint)">used ' + ago(k.lastUsed) + "</span></div>").join("") +
-          '<button class="btn ghost sm" id="newkey">＋ Create key</button></div></div>' +
+          '<button class="btn ghost sm" id="newkey">' + ico("plus") + 'Create key</button></div></div>' +
         '<div class="card"><div class="card-h"><h3>Webhooks</h3></div><div class="card-b stack">' +
           ws.webhooks.map((w) => '<div><div style="font-size:12px;word-break:break-all;color:var(--muted)">' + esc(w.url) + "</div>" +
             '<div class="chips" style="margin-top:6px">' + w.events.map((e) => '<span class="chip">' + esc(e) + "</span>").join("") + "</div></div>").join("") +
@@ -1190,13 +1266,13 @@
             '<div style="font-size:12px;color:var(--gold-bright)">' + esc(p.email) + "</div></div>" +
             '<div style="display:flex;flex-direction:column;gap:5px;align-items:flex-end">' +
             '<span class="pill ' + (p.verified ? "good" : "warn") + '">' + esc(p.emailStatus) + "</span>" +
-            '<button class="btn ghost sm" data-draft="' + p.id + '">✦ Draft email</button></div></div>').join("") +
+            '<button class="btn ghost sm" data-draft="' + p.id + '">' + ico("agent") + 'Draft email</button></div></div>').join("") +
         "</div>" +
         '<div id="draftzone"></div>' +
       "</div>",
-      '<button class="btn" data-research="' + co.id + '">✦ Deep research</button>' +
-      '<button class="btn ghost" data-look="' + co.id + '">◎ Find lookalikes</button>' +
-      '<button class="btn ghost" data-addco="' + co.id + '">＋ Add to campaign</button>'
+      '<button class="btn" data-research="' + co.id + '">' + ico("agent") + 'Deep research</button>' +
+      '<button class="btn ghost" data-look="' + co.id + '">' + ico("similar") + 'Find lookalikes</button>' +
+      '<button class="btn ghost" data-addco="' + co.id + '">' + ico("plus") + 'Add to campaign</button>'
     );
     $$("[data-draft]").forEach((b) => (b.onclick = () => {
       const p = E.personById(b.dataset.draft);
@@ -1239,7 +1315,7 @@
         (r.technologies.length ? sec("Relevant technologies", '<div class="chips">' + r.technologies.map((c) => '<span class="chip">' + esc(c) + "</span>").join("") + "</div>") : "") +
         (r.decisionMaker ? sec("Primary decision maker", '<div style="font-size:13px">' + esc(r.decisionMaker.name) + " — " + esc(r.decisionMaker.title) +
           '<div style="color:var(--gold-bright);font-size:12.5px">' + esc(r.decisionMaker.email) + "</div></div>") : "") +
-        sec("Personalization angles", r.angles.map((a) => '<div style="display:flex;gap:9px;font-size:12.5px;color:var(--muted);padding:4px 0"><span style="color:var(--gold)">▸</span><span>' + esc(a) + "</span></div>").join("")) +
+        sec("Personalization angles", r.angles.map((a) => '<div style="display:flex;gap:9px;font-size:12.5px;color:var(--muted);padding:4px 0"><span class="tick"></span><span>' + esc(a) + "</span></div>").join("")) +
         sec("Outreach recommendation", '<div style="font-size:13px;color:var(--white)">' + esc(r.recommendation) + "</div>") +
         sec("Sources", '<div class="chips">' + r.sources.map((s) => '<span class="chip">' + esc(s) + "</span>").join("") + "</div>") +
       "</div>",
@@ -1272,7 +1348,7 @@
           '<div style="font-size:11.5px;color:var(--muted);margin-top:8px">Strength: ' + esc(em.strength) + "</div>") +
       "</div>",
       '<button class="btn" data-openco2="' + co.id + '">View account</button>' +
-      '<button class="btn ghost" data-copy="1">⧉ Copy email</button>'
+      '<button class="btn ghost" data-copy="1">' + ico("copy") + 'Copy email</button>'
     );
     $("[data-openco2]").onclick = () => openCompany(co.id);
     $("[data-copy]").onclick = () => { const t = $("#pdraft").value; if (navigator.clipboard) navigator.clipboard.writeText(t).catch(() => {}); toast("Copied"); };
@@ -1291,7 +1367,7 @@
           tile("Meetings", num(c.meetings), "booked") + "</div>" +
         '<div class="sec"><span class="label">Controls</span>' +
           '<div class="rowflex" style="margin-bottom:10px">' +
-            '<button class="btn ' + (c.status === "Active" ? "ghost" : "") + ' sm" data-toggle="' + c.id + '">' + (c.status === "Active" ? "❚❚ Pause" : "▶ Start") + "</button>" +
+            '<button class="btn ' + (c.status === "Active" ? "ghost" : "") + ' sm" data-toggle="' + c.id + '">' + (c.status === "Active" ? ico("pause", 14) + "Pause" : ico("play", 14) + "Start") + "</button>" +
             '<span class="pill ' + (c.status === "Active" ? "good" : c.status === "Paused" ? "warn" : "muted") + '">' + esc(c.status) + "</span></div>" +
           '<label class="toggle"><input type="checkbox" id="campauto" ' + (c.autopilot ? "checked" : "") + '><span class="tr"></span>' +
           "<span>Autopilot controls this campaign</span></label></div>" +
@@ -1312,7 +1388,7 @@
           (c.leadIds.length > 12 ? '<div style="font-size:12px;color:var(--faint);padding-top:8px">+ ' + (c.leadIds.length - 12) + " more</div>" : "") +
         "</div>" +
       "</div>",
-      '<button class="btn ghost" data-expcamp="' + c.id + '">⬇ Export leads</button>'
+      '<button class="btn ghost" data-expcamp="' + c.id + '">' + ico("down") + 'Export leads</button>'
     );
     $("[data-toggle]").onclick = () => {
       c.status = c.status === "Active" ? "Paused" : "Active";
@@ -1391,7 +1467,13 @@
 
   async function init() {
     $("#veil").onclick = closeDrawer;
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+    const sv = $("#sheetveil");
+    if (sv) sv.onclick = closeSheet;
+    const sx = $("#sheetclose");
+    if (sx) sx.onclick = closeSheet;
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { closeDrawer(); closeSheet(); }
+    });
 
     // Served by the API? Check the session, then hydrate from the database.
     // Opened straight off disk it falls back to the seeded local workspace.
