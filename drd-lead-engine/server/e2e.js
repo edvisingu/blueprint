@@ -87,17 +87,30 @@ srv.listen(0,"127.0.0.1",async()=>{
   const ct=db2.prepare("SELECT id,email FROM contacts WHERE origin='import'").get();
   const sending=require("./sending.js");
   const t=sending.unsubToken(db2,"org_root",ct.id); db2.close();
-  const u=await fetch(base+"/u/"+t,{method:"GET"});
+
+  // GET must only CONFIRM. Mail clients and security gateways fetch the links
+  // in a message with no human involved, so acting on GET would unsubscribe
+  // real prospects automatically.
+  const u=await fetch(base+"/u/"+t,{method:"GET",headers:{accept:"text/html"}});
   const html=await u.text();
-  ok("unsubscribe page returns 200",u.status===200,u.status);
+  ok("the confirm page returns 200",u.status===200,u.status);
   ok("returns HTML, not JSON",/text\/html/.test(u.headers.get("content-type")||""),u.headers.get("content-type"));
-  ok("page confirms by address",html.includes(ct.email),html.slice(0,120));
-  ok("page says it covers every brand",/every brand/i.test(html));
+  ok("it names the address",html.includes(ct.email),html.slice(0,120));
+  ok("it offers a single confirm button",/Unsubscribe me/.test(html));
+  const mid=open(path);
+  ok("GET wrote no suppression",mid.prepare("SELECT COUNT(*) n FROM suppressions WHERE value=?").get(ct.email).n===0);
+  mid.close();
+
+  // POST is the RFC 8058 one-click path and the form target.
+  const post=await fetch(base+"/u/"+t,{method:"POST",headers:{accept:"text/html"}});
+  const posted=await post.text();
+  ok("POST returns 200",post.status===200,post.status);
+  ok("it says the removal covers every brand",/all of our brands/.test(posted));
   const db3=open(path);
   ok("suppression written org-wide",db3.prepare("SELECT COUNT(*) n FROM suppressions WHERE value=? AND scope='Global'").get(ct.email).n===1);
   ok("consent revoked",db3.prepare("SELECT COUNT(*) n FROM consents WHERE contact_id=? AND revoked_at IS NOT NULL").get(ct.id).n===1);
   db3.close();
-  const u2=await fetch(base+"/u/nonexistenttoken",{method:"GET"});
+  const u2=await fetch(base+"/u/nonexistenttoken",{method:"GET",headers:{accept:"text/html"}});
   ok("unknown token 404s",u2.status===404,u2.status);
 
   console.log("\n9. Unauthenticated access to private routes is refused");

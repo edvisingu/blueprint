@@ -611,28 +611,88 @@ function create(opts) {
   R("GET", /^\/v1\/sends\/skip-report$/, (ctx) => ({ status: 200, body: {
     data: sending.skipReport(db, ctx.org.id, ctx.query.get("since") ? Number(ctx.query.get("since")) : undefined) } }));
 
-  // Public, unauthenticated, and must stay that way: RFC 8058 one-click
-  // unsubscribe POSTs carry no cookies or credentials, and the link must work
-  // for a recipient who has never signed in.
+  // ---- public unsubscribe ------------------------------------------------
+  // Unauthenticated by necessity: an RFC 8058 one-click POST carries no
+  // cookies or credentials, and the link has to work for a recipient who has
+  // never signed in. The token is 24 random bytes, which is the whole of the
+  // authorisation.
+
+  /* Escape for HTML. The page below renders a recipient's own address back to
+   * them, and that address arrives from an imported CSV. The email validator
+   * in importer.js rejects whitespace, @ , and ; in the local part but DOES
+   * permit angle brackets and quotes, so a crafted address such as
+   *   "><script>...</script>@example.com
+   * passes validation and would otherwise be injected into this page. */
+  const htmlEscape = (v) => String(v == null ? "" : v).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function unsubPage(opts) {
+    const o = opts || {};
+    return "<!doctype html><html lang=en><meta charset=utf8>" +
+      "<meta name=viewport content='width=device-width,initial-scale=1'>" +
+      "<title>" + htmlEscape(o.title) + "</title><style>" +
+      "body{font:16px/1.6 system-ui,-apple-system,sans-serif;margin:0;display:grid;place-items:center;" +
+      "min-height:100vh;background:#0A1628;color:#F4F6FA}" +
+      "main{max-width:32rem;padding:2rem;text-align:center}" +
+      "b{color:#C9A84C;word-break:break-all}h1{font-size:1.4rem;margin:0 0 1rem}" +
+      "p{color:#AEB8C9}button{font:600 16px system-ui;background:#C9A84C;color:#0A1628;border:0;" +
+      "border-radius:8px;padding:.85rem 1.5rem;cursor:pointer;margin-top:1rem}" +
+      "button:hover{background:#E3C878}</style><main><h1>" + htmlEscape(o.title) + "</h1>" +
+      "<p>" + o.bodyHtml + "</p>" + (o.form || "") + "</main></html>";
+  }
+
+  /* POST performs the unsubscribe. This is the RFC 8058 path. */
   R("POST", /^\/u\/([\w-]+)$/, (ctx, m) => {
     const r = db.prepare("SELECT org_id FROM unsubscribe_tokens WHERE token=?").get(m[1]);
     if (!r) return { status: 404, body: { error: "unknown_token" } };
     const out = sending.unsubscribe(db, r.org_id, m[1]);
+    // A browser form post wants a page; a mail provider's one-click wants a
+    // 200 and does not read the body.
+    // ctx.req, not req: handlers are registered outside the per-request
+    // closure, so the bare identifier is not in scope here.
+    if (/text\/html/.test((ctx.req && ctx.req.headers.accept) || "")) {
+      return { status: 200, html: unsubPage({
+        title: out.ok ? "You have been unsubscribed" : "This link has already been used",
+        bodyHtml: out.ok
+          ? "<b>" + htmlEscape(out.email) + "</b> has been removed from every list we operate, " +
+            "across all of our brands. Nothing further is needed."
+          : "No action was taken, because this address is already unsubscribed.",
+      }) };
+    }
     return { status: out.ok ? 200 : 400, body: out };
   }, true);
 
+  /* GET shows a confirmation with a single button, and changes NOTHING.
+   *
+   * An earlier version unsubscribed on GET. That is unsafe in practice rather
+   * than in theory: mail clients, link scanners and security gateways fetch
+   * the URLs in a message without a human involved, so a legitimate prospect
+   * would be silently unsubscribed by their own employer's mail filter and we
+   * would read it as disinterest. One button is still "readily performed". */
   R("GET", /^\/u\/([\w-]+)$/, (ctx, m) => {
-    const r = db.prepare("SELECT org_id FROM unsubscribe_tokens WHERE token=?").get(m[1]);
-    if (!r) return { status: 404, body: { error: "unknown_token" } };
-    const out = sending.unsubscribe(db, r.org_id, m[1]);
-    return { status: 200, html:
-      "<!doctype html><meta charset=utf8><meta name=viewport content='width=device-width,initial-scale=1'>" +
-      "<title>Unsubscribed</title><style>body{font:16px/1.6 system-ui;margin:0;display:grid;place-items:center;" +
-      "min-height:100vh;background:#0A1628;color:#F4F6FA}div{max-width:30rem;padding:2rem;text-align:center}" +
-      "b{color:#C9A84C}</style><div><h1>You've been unsubscribed</h1><p>" +
-      (out.ok ? "<b>" + (out.email || "") + "</b> has been removed from all of our mailing lists, across every brand we operate."
-              : "This link has already been used.") +
-      "</p><p>No further action is needed.</p></div>" };
+    const row = db.prepare(
+      "SELECT t.org_id, t.used_at, c.email FROM unsubscribe_tokens t" +
+      " LEFT JOIN contacts c ON c.id = t.contact_id WHERE t.token=?").get(m[1]);
+    if (!row) {
+      return { status: 404, html: unsubPage({
+        title: "This link is not valid",
+        bodyHtml: "The link may have been truncated by your mail client. Reply to the message and " +
+          "ask to be removed, and it will be actioned by hand.",
+      }) };
+    }
+    if (row.used_at) {
+      return { status: 200, html: unsubPage({
+        title: "Already unsubscribed",
+        bodyHtml: "<b>" + htmlEscape(row.email) + "</b> is already removed from every list we operate. " +
+          "Nothing further is needed.",
+      }) };
+    }
+    return { status: 200, html: unsubPage({
+      title: "Unsubscribe",
+      bodyHtml: "Confirm that <b>" + htmlEscape(row.email) + "</b> should be removed from every list " +
+        "we operate, across all of our brands. This is permanent.",
+      form: '<form method="post"><button type="submit">Unsubscribe me</button></form>',
+    }) };
   }, true);
 
   // ---- meetings: slots and booking --------------------------------------

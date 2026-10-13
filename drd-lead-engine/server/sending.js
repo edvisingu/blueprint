@@ -226,6 +226,7 @@ function footer(org, unsubUrl) {
     [org.contact_email, org.contact_phone].filter(Boolean).join(" · "),
     "",
     "Don't want these emails? Unsubscribe here: " + unsubUrl,
+    "(That link asks you to confirm. One click, and you are removed from every list we operate.)",
   ];
   return { ok: true, text: lines.join("\n"), unsubUrl };
 }
