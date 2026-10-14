@@ -206,3 +206,87 @@ PayPal, Cloudflare, Canva, Dorik.
 Supabase is connected and worth noting: it is hosted Postgres, so it is an
 alternative to running SQLite on a VPS if this ever needs to be reachable from
 more than one place. Not a migration to start today.
+
+---
+
+## Appendix: the exact setup, step by step
+
+Claude cannot do any of this. The connectors available to it (Gmail, Calendar,
+Drive, Sheets, Docs, Slides) act as the user on their data. Adding a domain or
+creating a user needs the Workspace **Admin SDK**, which is a different API
+with different scopes and is not connected. DNS is at Porkbun, where there is
+no access at all.
+
+**Verify every DNS value against what the Admin console shows you.** It
+displays the exact records for your account. Google has changed its
+recommended MX setup, and this file is written from memory in an environment
+with no internet access, so the console wins over anything below.
+
+### 1. Add drdsports.com as a secondary domain
+
+Admin console → Account → Domains → Manage domains → Add a domain.
+Choose **secondary domain**, not domain alias. A domain alias only mirrors
+existing mailboxes; a secondary domain can hold its own users.
+
+Google gives a TXT record to prove ownership. Add it at Porkbun, then click
+verify.
+
+### 2. DNS at Porkbun for drdsports.com
+
+| Type | Host | Value | Note |
+|---|---|---|---|
+| MX | (blank/root) | `smtp.google.com` priority 1 | Google's current single-record setup. Older accounts use a five-record ASPMX set; the console shows which applies to you |
+| TXT | (blank/root) | `v=spf1 include:_spf.google.com ~all` | One SPF record only. If one already exists, merge, do not add a second |
+| TXT | `google._domainkey` | generated in step 3 | Do not invent this value |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:dmarc@drdsports.com` | Start at p=none |
+
+Two things that are easy to get wrong:
+
+- **Never two SPF records.** Two records is a permanent error, not a warning,
+  and it fails SPF entirely.
+- **`~all`, not `-all`, to begin with.** A hard fail before you know what else
+  sends as that domain will bounce legitimate mail.
+
+### 3. Generate DKIM
+
+Admin console → Apps → Google Workspace → Gmail → Authenticate email. Select
+drdsports.com, choose **2048-bit**, generate. Publish the TXT record it gives
+you at Porkbun, wait for propagation, then come back and click **Start
+authentication**.
+
+Generating the key does nothing on its own. The record must be live and the
+button must be clicked, which is the step most often missed.
+
+### 4. Create the user
+
+Admin console → Directory → Users → Add new user, on the drdsports.com domain:
+
+```
+outreach@drdsports.com
+```
+
+A **user**, not an alias. The reputation reason often given for this is wrong:
+reputation attaches to the domain, so a user and an alias on the same domain
+share it. The real reasons are operational. Replies land in a clean mailbox
+rather than a personal inbox of tens of thousands of messages, the reply
+poller reads only that mailbox, and the credential can be revoked on its own.
+
+This adds one seat to the bill.
+
+### 5. Move DMARC up, later
+
+Leave `p=none` until the aggregate reports at the rua address show your
+legitimate mail passing. Then `p=quarantine`, then `p=reject`. `p=none`
+asserts nothing; it only collects reports.
+
+### What Claude can verify once this exists
+
+- That SPF and DMARC resolve, through the readiness gate (`GET /v1/readiness`)
+- That a test message from the new mailbox carries both List-Unsubscribe
+  headers and that Google's DKIM signature covers them, by reading the
+  received message through the Gmail connector
+- That the whole gate goes green before anything is armed
+
+DKIM alignment cannot be confirmed from DNS alone. It needs a real delivered
+message, which is why that check is deliberately listed as unverified rather
+than assumed to pass.
