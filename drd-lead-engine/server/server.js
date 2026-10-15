@@ -1,0 +1,1197 @@
+/* Dr. D Lead Engineering System — HTTP API (spec §R).
+ * Zero dependencies: node:http + node:sqlite.
+ */
+const http = require("http");
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
+const { URL } = require("url");
+const { open, id } = require("./db.js");
+const consent = require("./consent.js");
+const sending = require("./sending.js");
+const importer = require("./importer.js");
+const readiness = require("./readiness.js");
+const runner = require("./runner.js");
+const replies = require("./replies.js");
+const sequences = require("./sequences.js");
+const calendar = require("./calendar.js");
+const { hashToken } = require("./seed.js");
+const { DATA, ENGINE } = require("./shared.js");
+const AI = require("./ai.js");
+
+const ROOT = path.join(__dirname, "..");
+
+/* Is this request from the machine itself? Used to confine the passwordless
+ * development fallback. ::ffff:127.0.0.1 is how an IPv4 loopback peer appears
+ * on a dual-stack socket, and missing the mapped form would make the check
+ * pass for nobody and the fallback useless. */
+function isLoopback(req) {
+  const a = (req && req.socket && req.socket.remoteAddress) || "";
+  if (a === "::1") return true;
+  // Anchored dotted-quad, not a "127." prefix: a prefix test also accepts
+  // 127.0.0.1.evil.test. remoteAddress is always an IP rather than a name, so
+  // that is not reachable in practice, but a security predicate should not
+  // depend on that being true elsewhere.
+  const v4 = /^(?:::ffff:)?(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(a);
+  if (!v4) return false;
+  const parts = v4.slice(1).map(Number);
+  if (parts.some((n) => n > 255)) return false;
+  return parts[0] === 127;
+}
+
+/* Response headers applied to static replies too, not only API replies. */
+const SEC_HEADERS = {
+  "x-content-type-options": "nosniff",
+  "referrer-policy": "same-origin",
+  "cache-control": "no-store",
+};
+
+// ---------------------------------------------------------------- security
+// PUBLIC=1 (or NODE_ENV=production) means the server is internet-facing:
+// an admin password and a stable session secret then become mandatory.
+const PUBLIC = process.env.DRD_PUBLIC === "1" || process.env.NODE_ENV === "production";
+const ADMIN_PASSWORD = process.env.DRD_ADMIN_PASSWORD || "";
+const SESSION_SECRET = process.env.DRD_SESSION_SECRET || crypto.randomBytes(32).toString("hex");
+const SESSION_TTL_MS = 1000 * 60 * 60 * 12;
+const COOKIE = "drd_session";
+
+if (PUBLIC && !ADMIN_PASSWORD) {
+  console.error("REFUSING TO START: DRD_ADMIN_PASSWORD must be set when DRD_PUBLIC=1.");
+  console.error("A public deployment without a password would expose the whole API.");
+  process.exit(1);
+}
+if (PUBLIC && !process.env.DRD_SESSION_SECRET) {
+  console.error("REFUSING TO START: DRD_SESSION_SECRET must be set when DRD_PUBLIC=1.");
+  console.error("Without a stable secret every restart would silently log everyone out.");
+  process.exit(1);
+}
+
+function signSession(expires) {
+  const mac = crypto.createHmac("sha256", SESSION_SECRET).update(String(expires)).digest("hex");
+  return expires + "." + mac;
+}
+function verifySession(raw) {
+  if (!raw || raw.indexOf(".") < 0) return false;
+  const [exp, mac] = raw.split(".");
+  if (!/^\d+$/.test(exp) || +exp < Date.now()) return false;
+  const expect = crypto.createHmac("sha256", SESSION_SECRET).update(exp).digest("hex");
+  const a = Buffer.from(mac || "", "utf8"), b = Buffer.from(expect, "utf8");
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+function readCookie(req, name) {
+  const raw = req.headers.cookie || "";
+  for (const part of raw.split(";")) {
+    const i = part.indexOf("=");
+    if (i > 0 && part.slice(0, i).trim() === name) return decodeURIComponent(part.slice(i + 1).trim());
+  }
+  return null;
+}
+function isSecureReq(req) {
+  return (req.headers["x-forwarded-proto"] || "").split(",")[0].trim() === "https";
+}
+// Constant-time password comparison, length-safe.
+function passwordMatches(given) {
+  if (!ADMIN_PASSWORD || typeof given !== "string") return false;
+  const a = crypto.createHash("sha256").update(given).digest();
+  const b = crypto.createHash("sha256").update(ADMIN_PASSWORD).digest();
+  return crypto.timingSafeEqual(a, b);
+}
+const RATE = { windowMs: 60000, max: 300 };
+const buckets = new Map();
+
+function create(opts) {
+  opts = opts || {};
+  const db = open(opts.dbFile);
+  const log = opts.quiet ? () => {} : console.log;
+
+  // ---------------------------------------------------------------- helpers
+  const J = (o) => JSON.stringify(o);
+  const parseJSON = (s, d) => { try { return JSON.parse(s); } catch (e) { return d; } };
+
+  function hydrateCompany(r) {
+    if (!r) return null;
+    return { id: r.id, name: r.name, domain: r.domain, industry: r.industry, sub: r.sub,
+      country: r.country, region: r.region, city: r.city, size: r.size, revenue: r.revenue,
+      founded: r.founded, traffic: r.traffic, tech: parseJSON(r.tech_json, []),
+      signals: parseJSON(r.signals_json, []), funding: parseJSON(r.funding_json, null),
+      desc: r.description, pains: parseJSON(r.pains_json, []) };
+  }
+  const hydrateContact = (r) => r && ({ id: r.id, companyId: r.company_id, name: r.name, title: r.title,
+    seniority: r.seniority, department: r.department, email: r.email, emailStatus: r.email_status,
+    verified: !!r.verified, phone: r.phone, linkedin: r.linkedin, city: r.city, country: r.country });
+
+  const getCompany = (cid) => hydrateCompany(db.prepare("SELECT * FROM companies WHERE id=?").get(cid));
+  const getContact = (cid) => hydrateContact(db.prepare("SELECT * FROM contacts WHERE id=?").get(cid));
+
+  function audit(orgId, actor, action, detail) {
+    db.prepare("INSERT INTO audit_logs (id,org_id,actor,action,detail,at) VALUES (?,?,?,?,?,?)")
+      .run(id("aud"), orgId, actor, action, detail || "", Date.now());
+  }
+  function meter(orgId, kind, credits, cost, ref) {
+    db.prepare("INSERT INTO usage_events (id,org_id,kind,credits,cost,ref,at) VALUES (?,?,?,?,?,?,?)")
+      .run(id("use"), orgId, kind, credits, cost || 0, ref || null, Date.now());
+    db.prepare("UPDATE organizations SET credits_used = credits_used + ? WHERE id=?").run(credits, orgId);
+  }
+  function isSuppressed(orgId, email) {
+    if (!email) return false;
+    const domain = String(email).split("@")[1] || "";
+    const row = db.prepare("SELECT id FROM suppressions WHERE org_id=? AND (value=? OR value=?)").get(orgId, email, domain);
+    return !!row;
+  }
+  const EVENTS = ["lead.hot", "lead.replied", "meeting.booked", "campaign.started",
+    "campaign.paused", "campaign.completed", "unsubscribe.received"];
+  function fireWebhook(orgId, event, payload) {
+    const hooks = db.prepare("SELECT * FROM webhooks WHERE org_id=? AND active=1").all(orgId);
+    hooks.forEach((h) => {
+      if (!parseJSON(h.events_json, []).includes(event)) return;
+      // Recorded rather than sent: outbound delivery is the integration point.
+      db.prepare("INSERT INTO webhook_deliveries (id,webhook_id,event,payload_json,status,at) VALUES (?,?,?,?,?,?)")
+        .run(id("whd"), h.id, event, J(payload), "recorded", Date.now());
+    });
+  }
+
+  // ------------------------------------------------------------------ routes
+  const routes = [];
+  const R = (method, pattern, handler, publicRoute) => routes.push({ method, pattern, handler, publicRoute });
+
+  R("POST", /^\/v1\/auth\/login$/, (ctx) => {
+    if (!ADMIN_PASSWORD) return { status: 503, body: { error: "login_disabled", message: "No admin password configured on this server." } };
+    if (!passwordMatches(ctx.body && ctx.body.password))
+      return { status: 401, body: { error: "invalid_password" } };
+    const expires = Date.now() + SESSION_TTL_MS;
+    const flags = ["HttpOnly", "Path=/", "SameSite=Lax", "Max-Age=" + Math.floor(SESSION_TTL_MS / 1000)];
+    if (isSecureReq(ctx.req) || PUBLIC) flags.push("Secure");
+    return { status: 200, body: { ok: true, expires },
+      headers: { "set-cookie": COOKIE + "=" + encodeURIComponent(signSession(expires)) + "; " + flags.join("; ") } };
+  }, true);
+
+  R("POST", /^\/v1\/auth\/logout$/, () => ({ status: 200, body: { ok: true },
+    headers: { "set-cookie": COOKIE + "=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0" } }), true);
+
+  R("GET", /^\/v1\/auth\/me$/, (ctx) => ({ status: 200, body: {
+    authenticated: !!ctx.org, login_required: !!ADMIN_PASSWORD } }), true);
+
+  R("GET", /^\/v1\/health$/, () => ({ status: 200, body: { ok: true, provider: AI.provider(), model: AI.model } }), true);
+
+  R("GET", /^\/v1\/projects$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT * FROM projects WHERE org_id=?").all(ctx.org.id).map((p) => ({
+      id: p.id, name: p.name, website: p.website, autopilot: !!p.autopilot, profile: parseJSON(p.profile_json, {}) })) } }));
+
+  R("PATCH", /^\/v1\/autopilot$/, (ctx) => {
+    const on = ctx.body.autopilot ? 1 : 0;
+    db.prepare("UPDATE organizations SET autopilot=? WHERE id=?").run(on, ctx.org.id);
+    audit(ctx.org.id, ctx.actor, "autopilot." + (on ? "enabled" : "disabled"), "");
+    return { status: 200, body: { autopilot: !!on } };
+  });
+
+  R("GET", /^\/v1\/icps$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT i.* FROM icps i JOIN projects p ON p.id=i.project_id WHERE p.org_id=?").all(ctx.org.id)
+      .map((i) => ({ id: i.id, name: i.name, fit: i.fit, industry: i.industry, country: i.country,
+        sizeMin: i.size_min, approved: !!i.approved, why: i.why, buyers: parseJSON(i.buyers_json, []) })) } }));
+
+  R("PATCH", /^\/v1\/icps\/([\w-]+)$/, (ctx, m) => {
+    const row = db.prepare("SELECT * FROM icps WHERE id=?").get(m[1]);
+    if (!row) return { status: 404, body: { error: "icp_not_found" } };
+    const approved = ctx.body.approved ? 1 : 0;
+    db.prepare("UPDATE icps SET approved=? WHERE id=?").run(approved, m[1]);
+    audit(ctx.org.id, ctx.actor, "icp." + (approved ? "approved" : "rejected"), row.name);
+    return { status: 200, body: { id: m[1], approved: !!approved } };
+  });
+
+  // ---- search -----------------------------------------------------------
+  R("GET", /^\/v1\/search\/companies$/, (ctx) => {
+    const q = ctx.query.get("q") || "";
+    if (!q) return { status: 400, body: { error: "missing_query", message: "Pass ?q= with a natural-language description." } };
+    const icp = ctx.query.get("icp_id") ? db.prepare("SELECT * FROM icps WHERE id=?").get(ctx.query.get("icp_id")) : null;
+    const icpObj = icp ? { name: icp.name, industry: icp.industry, country: icp.country, sizeMin: icp.size_min } : null;
+    const out = ENGINE.searchCompanies(q, { icp: icpObj });
+    const limit = Math.min(200, +(ctx.query.get("limit") || 50));
+    return { status: 200, body: { criteria: out.criteria, total: out.results.length,
+      data: out.results.slice(0, limit).map((c) => ({ id: c.id, name: c.name, domain: c.domain,
+        industry: c.industry, sub: c.sub, city: c.city, country: c.country, size: c.size,
+        revenue: c.revenue, founded: c.founded, tech: c.tech, signals: c.signals, funding: c.funding,
+        fit_score: c._score, breakdown: c._breakdown, reason: c._reason,
+        contacts: db.prepare("SELECT COUNT(*) n FROM contacts WHERE company_id=?").get(c.id).n })) } };
+  });
+
+  R("GET", /^\/v1\/search\/people$/, (ctx) => {
+    const q = ctx.query.get("q") || "";
+    if (!q) return { status: 400, body: { error: "missing_query" } };
+    const out = ENGINE.searchPeople(q);
+    const limit = Math.min(200, +(ctx.query.get("limit") || 50));
+    return { status: 200, body: { criteria: out.criteria, total: out.results.length,
+      data: out.results.slice(0, limit).map((p) => ({ id: p.id, name: p.name, title: p.title,
+        seniority: p.seniority, department: p.department, email: p.email, email_status: p.emailStatus,
+        phone: p.phone, linkedin: p.linkedin, city: p.city, country: p.country,
+        company: { id: p.company.id, name: p.company.name, domain: p.company.domain,
+          industry: p.company.industry, size: p.company.size },
+        fit_score: p._score, reason: p._reason,
+        suppressed: isSuppressed(ctx.org.id, p.email) })) } };
+  });
+
+  R("GET", /^\/v1\/companies\/([\w-]+)$/, (ctx, m) => {
+    const c = getCompany(m[1]);
+    if (!c) return { status: 404, body: { error: "company_not_found" } };
+    const contacts = db.prepare("SELECT * FROM contacts WHERE company_id=?").all(m[1]).map(hydrateContact);
+    return { status: 200, body: { data: Object.assign({}, c, { contacts,
+      score: ENGINE.scoreCompany(c, ENGINE.parseQuery(""), null) }) } };
+  });
+
+  R("GET", /^\/v1\/companies\/([\w-]+)\/lookalikes$/, (ctx, m) => {
+    const c = getCompany(m[1]);
+    if (!c) return { status: 404, body: { error: "company_not_found" } };
+    const out = ENGINE.lookalikes(c, +(ctx.query.get("limit") || 25));
+    return { status: 200, body: { source: { id: c.id, name: c.name },
+      data: out.map((x) => ({ id: x.id, name: x.name, domain: x.domain, industry: x.industry,
+        city: x.city, country: x.country, size: x.size, similarity: x._score, reason: x._reason })) } };
+  });
+
+  R("GET", /^\/v1\/segments$/, () => ({ status: 200, body: { data: ENGINE.segments() } }));
+
+  // ---- research (async job + inline result) ------------------------------
+  R("POST", /^\/v1\/research$/, async (ctx) => {
+    const c = getCompany(ctx.body.company_id);
+    if (!c) return { status: 404, body: { error: "company_not_found" } };
+    const contact = ctx.body.contact_id ? getContact(ctx.body.contact_id)
+      : hydrateContact(db.prepare("SELECT * FROM contacts WHERE company_id=? LIMIT 1").get(c.id));
+    const jobId = id("job");
+    db.prepare("INSERT INTO jobs (id,org_id,kind,payload_json,state,created_at,updated_at) VALUES (?,?,?,?,?,?,?)")
+      .run(jobId, ctx.org.id, "research", J(ctx.body), "RESEARCHING", Date.now(), Date.now());
+    const report = await AI.deepResearch(c, contact);
+    const rid = id("rr");
+    db.prepare("INSERT INTO research_reports (id,company_id,contact_id,report_json,source,created_at) VALUES (?,?,?,?,?,?)")
+      .run(rid, c.id, contact ? contact.id : null, J(report), report._provider || "deterministic", Date.now());
+    db.prepare("UPDATE jobs SET state=?, result_json=?, updated_at=? WHERE id=?")
+      .run("DONE", J({ report_id: rid }), Date.now(), jobId);
+    meter(ctx.org.id, "research", 4, 0.12, c.id);
+    audit(ctx.org.id, ctx.actor, "research.generated", c.name);
+    return { status: 201, body: { id: rid, job_id: jobId, company_id: c.id, data: report } };
+  });
+
+  R("GET", /^\/v1\/research\/([\w-]+)$/, (ctx, m) => {
+    const r = db.prepare("SELECT * FROM research_reports WHERE id=?").get(m[1]);
+    if (!r) return { status: 404, body: { error: "report_not_found" } };
+    return { status: 200, body: { id: r.id, company_id: r.company_id, source: r.source, data: parseJSON(r.report_json, {}) } };
+  });
+
+  // ---- email generation --------------------------------------------------
+  R("POST", /^\/v1\/emails\/generate$/, async (ctx) => {
+    const contact = getContact(ctx.body.contact_id);
+    if (!contact) return { status: 404, body: { error: "contact_not_found" } };
+    const c = getCompany(contact.companyId);
+    const em = await AI.generateEmail(c, contact, { tone: ctx.body.tone, goal: ctx.body.goal });
+    return { status: 200, body: { data: em, suppressed: isSuppressed(ctx.org.id, contact.email) } };
+  });
+
+  // ---- campaigns ---------------------------------------------------------
+  const campaignRow = (c) => ({ id: c.id, name: c.name, icp_id: c.icp_id, goal: c.goal, tone: c.tone,
+    status: c.status, autopilot: !!c.autopilot, budget: c.budget, spend: c.spend,
+    sent: c.sent, replies: c.replies, positive: c.positive,
+    sequence: parseJSON(c.sequence_json, []),
+    leads: db.prepare("SELECT COUNT(*) n FROM campaign_leads WHERE campaign_id=?").get(c.id).n,
+    hot: db.prepare("SELECT COUNT(*) n FROM conversations WHERE campaign_id=? AND hot=1").get(c.id).n,
+    meetings: db.prepare("SELECT COUNT(*) n FROM meetings WHERE campaign_id=?").get(c.id).n });
+
+  R("GET", /^\/v1\/campaigns$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT c.* FROM campaigns c JOIN projects p ON p.id=c.project_id WHERE p.org_id=?")
+      .all(ctx.org.id).map(campaignRow) } }));
+
+  R("POST", /^\/v1\/campaigns$/, (ctx) => {
+    if (!ctx.body.name) return { status: 400, body: { error: "missing_name" } };
+    const p = db.prepare("SELECT id FROM projects WHERE org_id=? LIMIT 1").get(ctx.org.id);
+    const cid = id("cmp");
+    db.prepare(`INSERT INTO campaigns (id,project_id,name,icp_id,goal,tone,status,autopilot,budget,spend,sent,replies,positive,sequence_json,created_at)
+      VALUES (?,?,?,?,?,?,?,?,?,0,0,0,0,?,?)`)
+      .run(cid, p.id, ctx.body.name, ctx.body.icp_id || null, ctx.body.goal || "Book a call",
+        ctx.body.tone || "consultative", "Draft", ctx.body.autopilot ? 1 : 0, ctx.body.budget || 250,
+        J(ctx.body.sequence || [{ step: 1, day: 0, label: "Personalized opener" }]), Date.now());
+    audit(ctx.org.id, ctx.actor, "campaign.created", ctx.body.name);
+    return { status: 201, body: { data: campaignRow(db.prepare("SELECT * FROM campaigns WHERE id=?").get(cid)) } };
+  });
+
+  R("GET", /^\/v1\/campaigns\/([\w-]+)$/, (ctx, m) => {
+    const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(m[1]);
+    if (!c) return { status: 404, body: { error: "campaign_not_found" } };
+    return { status: 200, body: { data: campaignRow(c) } };
+  });
+
+  ["start", "pause"].forEach((verb) => {
+    R("POST", new RegExp("^/v1/campaigns/([\\w-]+)/" + verb + "$"), (ctx, m) => {
+      const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(m[1]);
+      if (!c) return { status: 404, body: { error: "campaign_not_found" } };
+      const status = verb === "start" ? "Active" : "Paused";
+      db.prepare("UPDATE campaigns SET status=? WHERE id=?").run(status, m[1]);
+      audit(ctx.org.id, ctx.actor, "campaign." + verb, c.name);
+      fireWebhook(ctx.org.id, verb === "start" ? "campaign.started" : "campaign.paused", { campaign_id: m[1] });
+      return { status: 200, body: { id: m[1], status } };
+    });
+  });
+
+  // Bulk import. Enforces suppression and dedupe — the two things that make
+  // an import safe. Reports exactly what happened to every row.
+  R("POST", /^\/v1\/campaigns\/([\w-]+)\/import$/, (ctx, m) => {
+    const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(m[1]);
+    if (!c) return { status: 404, body: { error: "campaign_not_found" } };
+    const leads = Array.isArray(ctx.body.leads) ? ctx.body.leads : null;
+    if (!leads) return { status: 400, body: { error: "missing_leads", message: "Body must include a leads array." } };
+    const res = { imported: 0, suppressed: 0, duplicate: 0, unmatched: 0, errors: [] };
+    const ins = db.prepare("INSERT OR IGNORE INTO campaign_leads (id,campaign_id,contact_id,status,step,score,added_at) VALUES (?,?,?,?,0,?,?)");
+    leads.forEach((l, i) => {
+      if (!l || !l.email) { res.errors.push({ row: i, error: "missing_email" }); return; }
+      const row = db.prepare("SELECT * FROM contacts WHERE email=?").get(l.email);
+      if (!row) { res.unmatched++; return; }
+      if (isSuppressed(ctx.org.id, l.email)) { res.suppressed++; return; }
+      const dupe = db.prepare("SELECT id FROM campaign_leads WHERE campaign_id=? AND contact_id=?").get(m[1], row.id);
+      if (dupe) { res.duplicate++; return; }
+      const co = getCompany(row.company_id);
+      ins.run(id("cl"), m[1], row.id, "Queued", ENGINE.scoreCompany(co, ENGINE.parseQuery(""), null).total, Date.now());
+      res.imported++;
+    });
+    audit(ctx.org.id, ctx.actor, "campaign.import", `${res.imported} imported, ${res.suppressed} suppressed, ${res.duplicate} duplicate`);
+    return { status: 200, body: res };
+  });
+
+  R("GET", /^\/v1\/campaigns\/([\w-]+)\/analytics$/, (ctx, m) => {
+    const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(m[1]);
+    if (!c) return { status: 404, body: { error: "campaign_not_found" } };
+    const meetings = db.prepare("SELECT COUNT(*) n FROM meetings WHERE campaign_id=?").get(m[1]).n;
+    const hot = db.prepare("SELECT COUNT(*) n FROM conversations WHERE campaign_id=? AND hot=1").get(m[1]).n;
+    return { status: 200, body: { data: { campaign_id: m[1], sent: c.sent, replies: c.replies,
+      positive: c.positive, hot, meetings, spend: c.spend,
+      reply_rate: c.sent ? +(c.replies / c.sent * 100).toFixed(1) : 0,
+      cost_per_reply: c.replies ? +(c.spend / c.replies).toFixed(2) : 0,
+      cost_per_meeting: meetings ? +(c.spend / meetings).toFixed(2) : 0 } } };
+  });
+
+  // ---- send (enforces suppression + budget) ------------------------------
+  R("POST", /^\/v1\/campaigns\/([\w-]+)\/send$/, async (ctx, m) => {
+    const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(m[1]);
+    if (!c) return { status: 404, body: { error: "campaign_not_found" } };
+    if (c.status !== "Active") return { status: 409, body: { error: "campaign_not_active", status: c.status } };
+    const rate = 0.031;
+    const limit = Math.min(+(ctx.body.limit || 10), 100);
+    const queued = db.prepare("SELECT * FROM campaign_leads WHERE campaign_id=? AND status='Queued' LIMIT ?").all(m[1], limit);
+    const res = { sent: 0, skipped_suppressed: 0, skipped_budget: 0 };
+    for (const lead of queued) {
+      if (c.spend + rate * (res.sent + 1) > c.budget) { res.skipped_budget++; continue; }
+      const contact = getContact(lead.contact_id);
+      if (isSuppressed(ctx.org.id, contact.email)) {
+        db.prepare("UPDATE campaign_leads SET status='Suppressed' WHERE id=?").run(lead.id);
+        res.skipped_suppressed++; continue;
+      }
+      const co = getCompany(contact.companyId);
+      const em = await AI.generateEmail(co, contact, { tone: c.tone, goal: c.goal });
+      const convId = id("cnv");
+      db.prepare(`INSERT INTO conversations (id,campaign_id,contact_id,company_id,subject,status,hot,last_at)
+        VALUES (?,?,?,?,?,'Sent',0,?)`).run(convId, m[1], contact.id, co.id, em.subject, Date.now());
+      db.prepare("INSERT INTO messages (id,conversation_id,direction,body,subject,at) VALUES (?,?,?,?,?,?)")
+        .run(id("ms"), convId, "out", em.body, em.subject, Date.now());
+      db.prepare("UPDATE campaign_leads SET status='Contacted', step=1 WHERE id=?").run(lead.id);
+      res.sent++;
+    }
+    if (res.sent) {
+      db.prepare("UPDATE campaigns SET sent=sent+?, spend=ROUND(spend+?,2) WHERE id=?").run(res.sent, res.sent * rate, m[1]);
+      meter(ctx.org.id, "email", res.sent, +(res.sent * rate).toFixed(2), m[1]);
+    }
+    audit(ctx.org.id, ctx.actor, "campaign.send", `${res.sent} sent, ${res.skipped_suppressed} suppressed`);
+    return { status: 200, body: res };
+  });
+
+  // ---- leads / conversations --------------------------------------------
+  R("GET", /^\/v1\/leads\/hot$/, (ctx) => {
+    const rows = db.prepare(`SELECT cv.*, ct.name cname, ct.title ctitle, ct.email cemail, co.name coname, co.industry coind
+      FROM conversations cv JOIN contacts ct ON ct.id=cv.contact_id JOIN companies co ON co.id=cv.company_id
+      WHERE cv.hot=1 ORDER BY cv.intent_confidence DESC`).all();
+    return { status: 200, body: { data: rows.map((r) => ({ conversation_id: r.id, contact: { id: r.contact_id, name: r.cname, title: r.ctitle, email: r.cemail },
+      company: { id: r.company_id, name: r.coname, industry: r.coind },
+      intent: r.intent, confidence: r.intent_confidence, action: parseJSON(r.intent_json, {}).action,
+      meeting: db.prepare("SELECT id,status,at FROM meetings WHERE contact_id=?").get(r.contact_id) || null })) } };
+  });
+
+  R("GET", /^\/v1\/leads$/, (ctx) => {
+    const cid = ctx.query.get("campaign_id");
+    const rows = cid
+      ? db.prepare("SELECT cl.*, ct.name, ct.title, ct.email, ct.email_status FROM campaign_leads cl JOIN contacts ct ON ct.id=cl.contact_id WHERE cl.campaign_id=?").all(cid)
+      : db.prepare("SELECT cl.*, ct.name, ct.title, ct.email, ct.email_status FROM campaign_leads cl JOIN contacts ct ON ct.id=cl.contact_id LIMIT 200").all();
+    return { status: 200, body: { total: rows.length, data: rows.map((r) => ({ id: r.id, campaign_id: r.campaign_id,
+      contact_id: r.contact_id, name: r.name, title: r.title, email: r.email, email_status: r.email_status,
+      status: r.status, step: r.step, score: r.score })) } };
+  });
+
+  R("GET", /^\/v1\/conversations$/, (ctx) => {
+    const status = ctx.query.get("status");
+    const rows = status
+      ? db.prepare("SELECT * FROM conversations WHERE status=? ORDER BY last_at DESC").all(status)
+      : db.prepare("SELECT * FROM conversations ORDER BY last_at DESC").all();
+    return { status: 200, body: { total: rows.length, data: rows.map((r) => ({ id: r.id, campaign_id: r.campaign_id,
+      contact: getContact(r.contact_id), company: { id: r.company_id, name: (getCompany(r.company_id) || {}).name },
+      subject: r.subject, status: r.status, intent: r.intent, confidence: r.intent_confidence,
+      intent_meta: parseJSON(r.intent_json, {}), hot: !!r.hot, last_at: r.last_at,
+      preview: (db.prepare("SELECT body FROM messages WHERE conversation_id=? ORDER BY at DESC LIMIT 1").get(r.id) || {}).body || "" })) } };
+  });
+
+  R("GET", /^\/v1\/conversations\/([\w-]+)$/, (ctx, m) => {
+    const r = db.prepare("SELECT * FROM conversations WHERE id=?").get(m[1]);
+    if (!r) return { status: 404, body: { error: "conversation_not_found" } };
+    return { status: 200, body: { data: { id: r.id, campaign_id: r.campaign_id, subject: r.subject,
+      status: r.status, intent: r.intent, confidence: r.intent_confidence, intent_meta: parseJSON(r.intent_json, {}),
+      hot: !!r.hot, contact: getContact(r.contact_id), company: getCompany(r.company_id),
+      messages: db.prepare("SELECT direction,body,subject,at FROM messages WHERE conversation_id=? ORDER BY at").all(r.id) } } };
+  });
+
+  // Inbound reply: classify, route, auto-suppress on compliance intents.
+  R("POST", /^\/v1\/conversations\/([\w-]+)\/inbound$/, async (ctx, m) => {
+    const r = db.prepare("SELECT * FROM conversations WHERE id=?").get(m[1]);
+    if (!r) return { status: 404, body: { error: "conversation_not_found" } };
+    if (!ctx.body.body) return { status: 400, body: { error: "missing_body" } };
+    const cls = await AI.classifyReply(ctx.body.body);
+    const now = Date.now();
+    db.prepare("INSERT INTO messages (id,conversation_id,direction,body,subject,at) VALUES (?,?,?,?,?,?)")
+      .run(id("ms"), m[1], "in", ctx.body.body, r.subject, now);
+    const compliance = cls.intent === "Unsubscribe" || cls.intent === "Negative";
+    db.prepare("UPDATE conversations SET intent=?, intent_confidence=?, intent_json=?, hot=?, status=?, last_at=? WHERE id=?")
+      .run(cls.intent, cls.confidence, J(cls), cls.hot ? 1 : 0, compliance ? "Closed" : "Need Reply", now, m[1]);
+    db.prepare("UPDATE campaigns SET replies=replies+1 WHERE id=?").run(r.campaign_id);
+    const contact = getContact(r.contact_id);
+    if (compliance) {
+      db.prepare("INSERT OR IGNORE INTO suppressions (id,org_id,type,value,reason,scope,created_at) VALUES (?,?,?,?,?,?,?)")
+        .run(id("sup"), ctx.org.id, "Person", contact.email,
+          cls.intent === "Unsubscribe" ? "Unsubscribe request" : "Explicit negative reply", "Global", now);
+      fireWebhook(ctx.org.id, "unsubscribe.received", { contact_id: contact.id, email: contact.email });
+      audit(ctx.org.id, ctx.actor, "suppression.auto", contact.email + " (" + cls.intent + ")");
+    }
+    if (cls.hot) fireWebhook(ctx.org.id, "lead.hot", { conversation_id: m[1], contact_id: contact.id, intent: cls.intent });
+    fireWebhook(ctx.org.id, "lead.replied", { conversation_id: m[1], intent: cls.intent });
+    return { status: 200, body: { conversation_id: m[1], classification: cls, suppressed: compliance } };
+  });
+
+  R("POST", /^\/v1\/conversations\/([\w-]+)\/reply$/, (ctx, m) => {
+    const r = db.prepare("SELECT * FROM conversations WHERE id=?").get(m[1]);
+    if (!r) return { status: 404, body: { error: "conversation_not_found" } };
+    if (!ctx.body.body) return { status: 400, body: { error: "missing_body" } };
+    const contact = getContact(r.contact_id);
+    if (isSuppressed(ctx.org.id, contact.email))
+      return { status: 409, body: { error: "contact_suppressed", message: "This contact is on the suppression list." } };
+    db.prepare("INSERT INTO messages (id,conversation_id,direction,body,subject,at) VALUES (?,?,?,?,?,?)")
+      .run(id("ms"), m[1], "out", ctx.body.body, r.subject, Date.now());
+    db.prepare("UPDATE conversations SET status='Replied', last_at=? WHERE id=?").run(Date.now(), m[1]);
+    audit(ctx.org.id, ctx.actor, "conversation.reply", m[1]);
+    return { status: 200, body: { conversation_id: m[1], status: "Replied" } };
+  });
+
+  // ---- meetings ----------------------------------------------------------
+  R("GET", /^\/v1\/meetings$/, () => ({ status: 200, body: {
+    data: db.prepare("SELECT * FROM meetings ORDER BY at").all().map((m) => ({ id: m.id, campaign_id: m.campaign_id,
+      title: m.title, at: m.at, duration: m.duration, status: m.status,
+      contact: getContact(m.contact_id), company: { id: m.company_id, name: (getCompany(m.company_id) || {}).name } })) } }));
+
+  R("POST", /^\/v1\/meetings$/, (ctx) => {
+    const contact = getContact(ctx.body.contact_id);
+    if (!contact) return { status: 404, body: { error: "contact_not_found" } };
+    const existing = db.prepare("SELECT id FROM meetings WHERE contact_id=?").get(contact.id);
+    if (existing) return { status: 409, body: { error: "meeting_exists", meeting_id: existing.id } };
+    const co = getCompany(contact.companyId);
+    const mid = id("mtg");
+    db.prepare("INSERT INTO meetings (id,campaign_id,contact_id,company_id,title,at,duration,status,created_at) VALUES (?,?,?,?,?,?,?,?,?)")
+      .run(mid, ctx.body.campaign_id || null, contact.id, co.id,
+        ctx.body.title || co.name + " — intro", ctx.body.at || Date.now() + 5 * 86400000,
+        ctx.body.duration || 30, ctx.body.status || "Confirmed", Date.now());
+    fireWebhook(ctx.org.id, "meeting.booked", { meeting_id: mid, contact_id: contact.id });
+    audit(ctx.org.id, ctx.actor, "meeting.booked", co.name);
+    return { status: 201, body: { data: { id: mid, contact_id: contact.id, company_id: co.id } } };
+  });
+
+  // ---- suppression -------------------------------------------------------
+  R("GET", /^\/v1\/suppressions$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT * FROM suppressions WHERE org_id=? ORDER BY created_at DESC").all(ctx.org.id) } }));
+
+  R("POST", /^\/v1\/suppressions$/, (ctx) => {
+    if (!ctx.body.value) return { status: 400, body: { error: "missing_value" } };
+    const sid = id("sup");
+    try {
+      db.prepare("INSERT INTO suppressions (id,org_id,type,value,reason,scope,created_at) VALUES (?,?,?,?,?,?,?)")
+        .run(sid, ctx.org.id, ctx.body.value.includes("@") ? "Person" : "Domain", ctx.body.value,
+          ctx.body.reason || "Manual entry", ctx.body.scope || "Global", Date.now());
+    } catch (e) { return { status: 409, body: { error: "already_suppressed" } }; }
+    audit(ctx.org.id, ctx.actor, "suppression.added", ctx.body.value);
+    return { status: 201, body: { id: sid, value: ctx.body.value } };
+  });
+
+  R("DELETE", /^\/v1\/suppressions\/([\w-]+)$/, (ctx, m) => {
+    const r = db.prepare("SELECT * FROM suppressions WHERE id=? AND org_id=?").get(m[1], ctx.org.id);
+    if (!r) return { status: 404, body: { error: "suppression_not_found" } };
+    db.prepare("DELETE FROM suppressions WHERE id=?").run(m[1]);
+    audit(ctx.org.id, ctx.actor, "suppression.removed", r.value);
+    return { status: 200, body: { deleted: m[1] } };
+  });
+
+  // ---- go-live: readiness, arming, consent, import, unsubscribe ----------
+  // Grouped together because they are one concern: turning a demo into a
+  // system that may contact real people. See docs/GO-LIVE.md.
+
+  R("GET", /^\/v1\/readiness$/, async (ctx) => ({
+    status: 200, body: await readiness.evaluate(db, ctx.org.id, { skipDns: ctx.query.get("skip_dns") === "1" }) }));
+
+  R("POST", /^\/v1\/readiness\/arm$/, async (ctx) => {
+    const on = ctx.body && ctx.body.armed === true;
+    const r = await readiness.arm(db, ctx.org.id, on, ctx.actor, { skipDns: ctx.body && ctx.body.skip_dns });
+    return { status: r.ok ? 200 : 409, body: r };
+  });
+
+  // Audit record of a decision taken outside this system. The system cannot
+  // grant itself clearance; this only records who did and when.
+  R("POST", /^\/v1\/clearance$/, (ctx) => {
+    const b = ctx.body || {};
+    if (!b.subject || !b.granted_by) {
+      return { status: 400, body: { error: "missing_fields",
+        message: "subject and granted_by are required: what was cleared, and by whom." } };
+    }
+    const cid = id("cl");
+    db.prepare("INSERT INTO clearances (id,org_id,subject,granted_by,recorded_by,note,at) VALUES (?,?,?,?,?,?,?)")
+      .run(cid, ctx.org.id, b.subject, b.granted_by, ctx.actor, b.note || null, b.at || Date.now());
+    audit(ctx.org.id, ctx.actor, "clearance.recorded", b.subject + " by " + b.granted_by);
+    return { status: 201, body: { id: cid } };
+  });
+
+  R("GET", /^\/v1\/clearance$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT * FROM clearances WHERE org_id=? ORDER BY at DESC").all(ctx.org.id) } }));
+
+  R("GET", /^\/v1\/consent\/bases$/, () => ({ status: 200, body: { data: consent.basisList() } }));
+
+  R("GET", /^\/v1\/consent\/coverage$/, (ctx) => ({
+    status: 200, body: { data: consent.coverage(db, ctx.org.id) } }));
+
+  R("GET", /^\/v1\/contacts\/([\w-]+)\/consent$/, (ctx, m) => ({ status: 200, body: {
+    data: db.prepare("SELECT * FROM consents WHERE contact_id=? AND org_id=? ORDER BY captured_at DESC")
+      .all(m[1], ctx.org.id),
+    eligibility: consent.eligibility(db, m[1], Date.now(), ctx.query.get("brand_id")) } }));
+
+  R("POST", /^\/v1\/contacts\/([\w-]+)\/consent$/, (ctx, m) => {
+    const b = Object.assign({}, ctx.body, { captured_by: ctx.actor });
+    const v = consent.validate(b);
+    if (!v.ok) return { status: 400, body: { error: "consent_invalid", errors: v.errors } };
+    const contact = db.prepare("SELECT id, origin FROM contacts WHERE id=?").get(m[1]);
+    if (!contact) return { status: 404, body: { error: "contact_not_found" } };
+    const cid = id("cs");
+    db.prepare("INSERT INTO consents (id,contact_id,org_id,brand_id,basis,source_url,source_note,evidence_ref," +
+      "role_relevance,anti_solicitation_checked,captured_at,captured_by,expires_at,created_at)" +
+      " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)")
+      .run(cid, m[1], ctx.org.id, b.brand_id || null, b.basis, b.source_url || null, b.source_note || null,
+        b.evidence_ref || null, b.role_relevance || null, b.anti_solicitation_checked ? 1 : 0,
+        Number(b.captured_at), ctx.actor, consent.expiryFor(b.basis, Number(b.captured_at)), Date.now());
+    audit(ctx.org.id, ctx.actor, "consent.recorded", m[1] + " " + b.basis);
+    return { status: 201, body: { id: cid } };
+  });
+
+  R("GET", /^\/v1\/import\/template$/, () => ({
+    status: 200, body: { columns: importer.COLUMNS, required: importer.REQUIRED, csv: importer.template() } }));
+
+  R("POST", /^\/v1\/import$/, async (ctx) => {
+    const csv = ctx.body && (ctx.body.csv || ctx.body.text);
+    if (!csv) return { status: 400, body: { error: "missing_csv",
+      message: "Post {csv: \"...\"}. GET /v1/import/template for the required columns." } };
+    const r = await importer.importCsv(db, ctx.org.id, csv, {
+      actor: ctx.actor, filename: (ctx.body && ctx.body.filename) || null,
+      skipMx: !!(ctx.body && ctx.body.skip_mx), skipVerify: !!(ctx.body && ctx.body.skip_verify) });
+    return { status: r.ok ? 201 : 400, body: r };
+  });
+
+  R("GET", /^\/v1\/imports$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT id,filename,rows_total,rows_accepted,rows_rejected,created_at FROM imports WHERE org_id=? ORDER BY created_at DESC LIMIT 50").all(ctx.org.id) } }));
+
+  R("GET", /^\/v1\/imports\/([\w-]+)$/, (ctx, m) => {
+    const r = db.prepare("SELECT * FROM imports WHERE id=? AND org_id=?").get(m[1], ctx.org.id);
+    if (!r) return { status: 404, body: { error: "import_not_found" } };
+    return { status: 200, body: { data: Object.assign({}, r, { report: JSON.parse(r.report_json || "{}") }) } };
+  });
+
+  R("GET", /^\/v1\/mailboxes$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT id,address,display_name,provider,daily_cap,min_gap_seconds,timezone,status,pause_reason,created_at FROM mailboxes WHERE org_id=? ORDER BY created_at").all(ctx.org.id)
+      .map((mb) => Object.assign(mb, { sent_today: sending.countSentToday(db, mb.id), rates: sending.rates(db, mb.id) })) } }));
+
+  R("POST", /^\/v1\/mailboxes$/, (ctx) => {
+    const b = ctx.body || {};
+    if (!b.address) return { status: 400, body: { error: "missing_address" } };
+    const mid = id("mb");
+    try {
+      db.prepare("INSERT INTO mailboxes (id,org_id,address,display_name,provider,credential_env,daily_cap,min_gap_seconds,timezone,status,created_at)" +
+        " VALUES (?,?,?,?,?,?,?,?,?,?,?)")
+        .run(mid, ctx.org.id, b.address, b.display_name || null, b.provider || "dryrun",
+          b.credential_env || null, b.daily_cap || 20, b.min_gap_seconds || 180,
+          b.timezone || "UTC", b.status || "Disabled", Date.now());
+    } catch (e) { return { status: 409, body: { error: "mailbox_exists" } }; }
+    audit(ctx.org.id, ctx.actor, "mailbox.added", b.address);
+    return { status: 201, body: { id: mid } };
+  });
+
+  R("GET", /^\/v1\/alerts$/, (ctx) => ({ status: 200, body: { data: sending.openAlerts(db, ctx.org.id) } }));
+
+  R("POST", /^\/v1\/alerts\/([\w-]+)\/ack$/, (ctx, m) => {
+    const r = db.prepare("SELECT * FROM alerts WHERE id=? AND org_id=?").get(m[1], ctx.org.id);
+    if (!r) return { status: 404, body: { error: "alert_not_found" } };
+    db.prepare("UPDATE alerts SET state='ACK' WHERE id=?").run(m[1]);
+    return { status: 200, body: { id: m[1], state: "ACK" } };
+  });
+
+  R("GET", /^\/v1\/sends\/skip-report$/, (ctx) => ({ status: 200, body: {
+    data: sending.skipReport(db, ctx.org.id, ctx.query.get("since") ? Number(ctx.query.get("since")) : undefined) } }));
+
+  // ---- public unsubscribe ------------------------------------------------
+  // Unauthenticated by necessity: an RFC 8058 one-click POST carries no
+  // cookies or credentials, and the link has to work for a recipient who has
+  // never signed in. The token is 24 random bytes, which is the whole of the
+  // authorisation.
+
+  /* Escape for HTML. The page below renders a recipient's own address back to
+   * them, and that address arrives from an imported CSV. The email validator
+   * in importer.js rejects whitespace, @ , and ; in the local part but DOES
+   * permit angle brackets and quotes, so a crafted address such as
+   *   "><script>...</script>@example.com
+   * passes validation and would otherwise be injected into this page. */
+  const htmlEscape = (v) => String(v == null ? "" : v).replace(/[&<>"']/g,
+    (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+  function unsubPage(opts) {
+    const o = opts || {};
+    return "<!doctype html><html lang=en><meta charset=utf8>" +
+      "<meta name=viewport content='width=device-width,initial-scale=1'>" +
+      "<title>" + htmlEscape(o.title) + "</title><style>" +
+      "body{font:16px/1.6 system-ui,-apple-system,sans-serif;margin:0;display:grid;place-items:center;" +
+      "min-height:100vh;background:#0A1628;color:#F4F6FA}" +
+      "main{max-width:32rem;padding:2rem;text-align:center}" +
+      "b{color:#C9A84C;word-break:break-all}h1{font-size:1.4rem;margin:0 0 1rem}" +
+      "p{color:#AEB8C9}button{font:600 16px system-ui;background:#C9A84C;color:#0A1628;border:0;" +
+      "border-radius:8px;padding:.85rem 1.5rem;cursor:pointer;margin-top:1rem}" +
+      "button:hover{background:#E3C878}</style><main><h1>" + htmlEscape(o.title) + "</h1>" +
+      "<p>" + o.bodyHtml + "</p>" + (o.form || "") + "</main></html>";
+  }
+
+  /* POST performs the unsubscribe. This is the RFC 8058 path. */
+  R("POST", /^\/u\/([\w-]+)$/, (ctx, m) => {
+    const r = db.prepare("SELECT org_id FROM unsubscribe_tokens WHERE token=?").get(m[1]);
+    if (!r) return { status: 404, body: { error: "unknown_token" } };
+    const out = sending.unsubscribe(db, r.org_id, m[1]);
+    // A browser form post wants a page; a mail provider's one-click wants a
+    // 200 and does not read the body.
+    // ctx.req, not req: handlers are registered outside the per-request
+    // closure, so the bare identifier is not in scope here.
+    if (/text\/html/.test((ctx.req && ctx.req.headers.accept) || "")) {
+      return { status: 200, html: unsubPage({
+        title: out.ok ? "You have been unsubscribed" : "This link has already been used",
+        bodyHtml: out.ok
+          ? "<b>" + htmlEscape(out.email) + "</b> has been removed from every list we operate, " +
+            "across all of our brands. Nothing further is needed."
+          : "No action was taken, because this address is already unsubscribed.",
+      }) };
+    }
+    return { status: out.ok ? 200 : 400, body: out };
+  }, true);
+
+  /* GET shows a confirmation with a single button, and changes NOTHING.
+   *
+   * An earlier version unsubscribed on GET. That is unsafe in practice rather
+   * than in theory: mail clients, link scanners and security gateways fetch
+   * the URLs in a message without a human involved, so a legitimate prospect
+   * would be silently unsubscribed by their own employer's mail filter and we
+   * would read it as disinterest. One button is still "readily performed". */
+  R("GET", /^\/u\/([\w-]+)$/, (ctx, m) => {
+    const row = db.prepare(
+      "SELECT t.org_id, t.used_at, c.email FROM unsubscribe_tokens t" +
+      " LEFT JOIN contacts c ON c.id = t.contact_id WHERE t.token=?").get(m[1]);
+    if (!row) {
+      return { status: 404, html: unsubPage({
+        title: "This link is not valid",
+        bodyHtml: "The link may have been truncated by your mail client. Reply to the message and " +
+          "ask to be removed, and it will be actioned by hand.",
+      }) };
+    }
+    if (row.used_at) {
+      return { status: 200, html: unsubPage({
+        title: "Already unsubscribed",
+        bodyHtml: "<b>" + htmlEscape(row.email) + "</b> is already removed from every list we operate. " +
+          "Nothing further is needed.",
+      }) };
+    }
+    return { status: 200, html: unsubPage({
+      title: "Unsubscribe",
+      bodyHtml: "Confirm that <b>" + htmlEscape(row.email) + "</b> should be removed from every list " +
+        "we operate, across all of our brands. This is permanent.",
+      form: '<form method="post"><button type="submit">Unsubscribe me</button></form>',
+    }) };
+  }, true);
+
+  // ---- meetings: slots and booking --------------------------------------
+  // Free/busy comes from Google every time. Offering slots computed from our
+  // own meetings table would double-book the real calendar.
+  R("GET", /^\/v1\/calendar\/slots$/, async (ctx) => {
+    try {
+      const r = await calendar.offer(db, ctx.org.id, {
+        calendarId: ctx.query.get("calendar_id") || undefined,
+        timezone: ctx.query.get("tz") || undefined,
+        durationMin: Number(ctx.query.get("duration") || 15),
+        days: Number(ctx.query.get("days") || 10),
+      });
+      return { status: 200, body: r };
+    } catch (e) {
+      return { status: 503, body: { error: "calendar_unavailable", message: e.message, permanent: !!e.permanent } };
+    }
+  });
+
+  R("POST", /^\/v1\/calendar\/book$/, async (ctx) => {
+    const b = ctx.body || {};
+    if (!b.contact_id || !b.start) return { status: 400, body: { error: "contact_id and start are required" } };
+    try {
+      const r = await calendar.book(db, ctx.org.id, {
+        contactId: b.contact_id, campaignId: b.campaign_id, start: Number(b.start),
+        durationMin: b.duration_min, calendarId: b.calendar_id, summary: b.summary,
+        description: b.description, actor: ctx.actor });
+      return { status: r.ok ? 201 : 409, body: r };
+    } catch (e) {
+      return { status: 503, body: { error: "calendar_unavailable", message: e.message } };
+    }
+  });
+
+  // ---- pipeline ----------------------------------------------------------
+  // Four fields, deliberately not probabilities or a weighted forecast:
+  // weighted forecasting assumes large numbers and breaks below roughly 20
+  // open deals, which is the steady state here. These give velocity and
+  // staleness, which are the questions a one-person pipeline actually has.
+  R("PATCH", /^\/v1\/conversations\/([\w-]+)\/pipeline$/, (ctx, m) => {
+    const b = ctx.body || {};
+    const STAGES = ["New", "Contacted", "Replied", "Meeting", "Proposal", "Won", "Lost"];
+    if (b.stage && !STAGES.includes(b.stage)) {
+      return { status: 400, body: { error: "bad_stage", allowed: STAGES } };
+    }
+    const row = db.prepare("SELECT * FROM conversations WHERE id=?").get(m[1]);
+    if (!row) return { status: 404, body: { error: "conversation_not_found" } };
+    const now = Date.now();
+    // stage_entered_at only moves when the stage actually changes, so time in
+    // stage stays meaningful after an unrelated edit.
+    const stageChanged = b.stage && b.stage !== row.stage;
+    db.prepare(
+      "UPDATE conversations SET stage=COALESCE(?,stage), stage_entered_at=?," +
+        " lost_reason=COALESCE(?,lost_reason), next_action=COALESCE(?,next_action)," +
+        " next_action_at=COALESCE(?,next_action_at), last_activity_at=? WHERE id=?"
+    ).run(b.stage || null, stageChanged ? now : (row.stage_entered_at || now),
+      b.lost_reason || null, b.next_action || null, b.next_action_at || null, now, m[1]);
+    audit(ctx.org.id, ctx.actor, "pipeline.update", m[1] + (b.stage ? " -> " + b.stage : ""));
+    return { status: 200, body: { id: m[1], stage: b.stage || row.stage } };
+  });
+
+  R("GET", /^\/v1\/pipeline$/, (ctx) => {
+    const now = Date.now();
+    const byStage = db.prepare(
+      "SELECT stage, COUNT(*) n, AVG(?-COALESCE(stage_entered_at,last_at)) avg_age_ms" +
+      " FROM conversations GROUP BY stage").all(now);
+    // Stale: no activity in 14 days and not closed. The number a one-person
+    // pipeline most needs, and the one no tool surfaces by default.
+    const stale = db.prepare(
+      "SELECT c.id, c.subject, c.stage, c.next_action, COALESCE(c.last_activity_at,c.last_at) last" +
+      " FROM conversations c WHERE c.stage NOT IN ('Won','Lost')" +
+      " AND COALESCE(c.last_activity_at,c.last_at) < ? ORDER BY last ASC LIMIT 50").all(now - 14 * 86400000);
+    const lost = db.prepare(
+      "SELECT lost_reason, COUNT(*) n FROM conversations WHERE stage='Lost' AND lost_reason IS NOT NULL" +
+      " GROUP BY lost_reason ORDER BY n DESC").all();
+    return { status: 200, body: { data: {
+      byStage: byStage.map((r) => ({ stage: r.stage, n: r.n,
+        avgDaysInStage: r.avg_age_ms ? Math.round(r.avg_age_ms / 86400000) : null })),
+      stale, lostReasons: lost } } };
+  });
+
+  // ---- sequences ---------------------------------------------------------
+  R("POST", /^\/v1\/campaigns\/([\w-]+)\/sequence$/, (ctx, m) => {
+    const seq = (ctx.body && ctx.body.sequence) || null;
+    const errors = sequences.validateSequence(seq);
+    if (errors.length) return { status: 400, body: { error: "invalid_sequence", errors } };
+    const c = db.prepare("SELECT id FROM campaigns WHERE id=?").get(m[1]);
+    if (!c) return { status: 404, body: { error: "campaign_not_found" } };
+    db.prepare("UPDATE campaigns SET sequence_json=?, send_window_json=COALESCE(?,send_window_json) WHERE id=?")
+      .run(JSON.stringify(seq), ctx.body.send_window ? JSON.stringify(ctx.body.send_window) : null, m[1]);
+    audit(ctx.org.id, ctx.actor, "campaign.sequence", m[1] + ": " + seq.length + " steps");
+    return { status: 200, body: { id: m[1], steps: seq.length } };
+  });
+
+  // Render every step against one real contact before committing a list to it.
+  R("POST", /^\/v1\/campaigns\/([\w-]+)\/preview$/, (ctx, m) => {
+    const c = db.prepare("SELECT * FROM campaigns WHERE id=?").get(m[1]);
+    if (!c) return { status: 404, body: { error: "campaign_not_found" } };
+    const contactId = ctx.body && ctx.body.contact_id;
+    if (!contactId) return { status: 400, body: { error: "missing_contact_id" } };
+    let seq = [];
+    try { seq = JSON.parse(c.sequence_json || "[]"); } catch (e) {}
+    const vars = sequences.contextFor(db, contactId, c.brand_id);
+    if (!vars) return { status: 404, body: { error: "contact_not_found" } };
+    const rendered = seq.map((s, i) => {
+      const subj = sequences.render(s.subject, vars);
+      const body = sequences.render(s.body, vars);
+      return { step: i + 1, delayHours: s.delayHours || 0, subject: subj.text, body: body.text,
+        missing: [...new Set([...subj.missing, ...body.missing])] };
+    });
+    return { status: 200, body: { data: rendered, available: Object.keys(vars),
+      ok: rendered.every((r) => r.missing.length === 0) } };
+  });
+
+  R("POST", /^\/v1\/campaigns\/([\w-]+)\/enrol$/, (ctx, m) => {
+    const ids = (ctx.body && ctx.body.contact_ids) || [];
+    if (!ids.length) return { status: 400, body: { error: "no_contact_ids" } };
+    const r = sequences.enrol(db, ctx.org.id, m[1], ids, { actor: ctx.actor, startAt: ctx.body.start_at });
+    return { status: r.ok ? 201 : 400, body: r };
+  });
+
+  R("GET", /^\/v1\/campaigns\/([\w-]+)\/status$/, (ctx, m) => ({
+    status: 200, body: { data: sequences.status(db, ctx.org.id, m[1]) } }));
+
+  // ---- job queue and reply ingestion -------------------------------------
+  R("GET", /^\/v1\/jobs$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT id,kind,state,attempts,max_attempts,run_at,error,created_at,updated_at FROM jobs WHERE org_id=? ORDER BY updated_at DESC LIMIT 100").all(ctx.org.id),
+    stats: runner.stats(db, ctx.org.id) } }));
+
+  R("POST", /^\/v1\/jobs$/, (ctx) => {
+    const b = ctx.body || {};
+    if (!b.kind) return { status: 400, body: { error: "missing_kind", handlers: runner.registered() } };
+    if (!runner.registered().includes(b.kind)) {
+      return { status: 400, body: { error: "unknown_kind", message:
+        "No handler is registered for '" + b.kind + "'.", handlers: runner.registered() } };
+    }
+    const r = runner.enqueue(db, ctx.org.id, b.kind, b.payload || {}, {
+      runAt: b.run_at, idempotencyKey: b.idempotency_key,
+      repeatEveryMs: b.repeat_every_ms, priority: b.priority, maxAttempts: b.max_attempts });
+    return { status: r.duplicate ? 200 : 201, body: r };
+  });
+
+  // Drain on demand. The background loop handles the normal case; this exists
+  // so a deployment with no long-lived process can still make progress, and so
+  // the queue can be stepped by hand while debugging.
+  R("POST", /^\/v1\/jobs\/drain$/, async (ctx) => ({
+    status: 200, body: await runner.drain(db, { batchSize: (ctx.body && ctx.body.batch) || 10 }) }));
+
+  R("POST", /^\/v1\/jobs\/([\w-]+)\/revive$/, (ctx, m) => {
+    const r = runner.revive(db, ctx.org.id, m[1]);
+    return { status: r.ok ? 200 : 409, body: r };
+  });
+
+  R("GET", /^\/v1\/replies$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare(
+      "SELECT id,gmail_id,from_email,from_name,subject,intent,confidence,auto_reply,opt_out," +
+      "matched_via,conversation_id,received_at FROM inbound_messages" +
+      " WHERE org_id=? ORDER BY received_at DESC LIMIT 100").all(ctx.org.id),
+    // Reply rate deliberately excludes auto-replies: counting out-of-office
+    // messages as replies hides a message that is not landing.
+    summary: db.prepare(
+      "SELECT COUNT(*) total," +
+      " SUM(CASE WHEN auto_reply=1 THEN 1 ELSE 0 END) auto_replies," +
+      " SUM(CASE WHEN auto_reply=0 THEN 1 ELSE 0 END) real_replies," +
+      " SUM(CASE WHEN opt_out=1 THEN 1 ELSE 0 END) opt_outs," +
+      " SUM(CASE WHEN send_id IS NULL THEN 1 ELSE 0 END) unmatched" +
+      " FROM inbound_messages WHERE org_id=?").get(ctx.org.id) } }));
+
+  R("POST", /^\/v1\/replies\/poll$/, async (ctx) => {
+    try {
+      return { status: 200, body: await replies.poll(db, ctx.org.id, ctx.body || {}) };
+    } catch (e) {
+      return { status: 503, body: { error: "poll_failed", message: e.message, permanent: !!e.permanent } };
+    }
+  });
+
+  // ---- usage / analytics / audit ----------------------------------------
+  R("GET", /^\/v1\/usage$/, (ctx) => {
+    const org = db.prepare("SELECT * FROM organizations WHERE id=?").get(ctx.org.id);
+    const byKind = db.prepare("SELECT kind, SUM(credits) credits, SUM(cost) cost FROM usage_events WHERE org_id=? GROUP BY kind").all(ctx.org.id);
+    return { status: 200, body: { data: { plan: org.plan, credits_included: org.credits_included,
+      credits_used: org.credits_used, credits_remaining: org.credits_included - org.credits_used,
+      autopilot: !!org.autopilot, by_kind: byKind } } };
+  });
+
+  R("GET", /^\/v1\/analytics$/, (ctx) => {
+    const camps = db.prepare("SELECT c.* FROM campaigns c JOIN projects p ON p.id=c.project_id WHERE p.org_id=?").all(ctx.org.id);
+    const ws = { campaigns: camps.map((c) => ({ name: c.name, sent: c.sent, replies: c.replies,
+      positive: c.positive, spend: c.spend, leadIds: [],
+      hot: db.prepare("SELECT COUNT(*) n FROM conversations WHERE campaign_id=? AND hot=1").get(c.id).n,
+      meetings: db.prepare("SELECT COUNT(*) n FROM meetings WHERE campaign_id=?").get(c.id).n })) };
+    return { status: 200, body: { data: ENGINE.analytics(ws) } };
+  });
+
+  R("GET", /^\/v1\/audit$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT * FROM audit_logs WHERE org_id=? ORDER BY at DESC LIMIT 100").all(ctx.org.id) } }));
+
+  R("GET", /^\/v1\/webhooks\/deliveries$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare(`SELECT d.* FROM webhook_deliveries d JOIN webhooks w ON w.id=d.webhook_id
+      WHERE w.org_id=? ORDER BY d.at DESC LIMIT 100`).all(ctx.org.id) } }));
+
+  R("GET", /^\/v1\/webhooks$/, (ctx) => ({ status: 200, body: {
+    data: db.prepare("SELECT * FROM webhooks WHERE org_id=?").all(ctx.org.id).map((w) => ({
+      id: w.id, url: w.url, events: parseJSON(w.events_json, []), active: !!w.active, created_at: w.created_at })) } }));
+
+  R("POST", /^\/v1\/webhooks$/, (ctx) => {
+    if (!ctx.body.url) return { status: 400, body: { error: "missing_url" } };
+    const events = Array.isArray(ctx.body.events) ? ctx.body.events : [];
+    if (!events.length) return { status: 400, body: { error: "missing_events", message: "Subscribe to at least one event." } };
+    const unknown = events.filter((e) => !EVENTS.includes(e));
+    if (unknown.length) return { status: 400, body: { error: "unknown_events", unknown, supported: EVENTS } };
+    const wid = id("wh");
+    db.prepare("INSERT INTO webhooks (id,org_id,url,events_json,active,created_at) VALUES (?,?,?,?,?,?)")
+      .run(wid, ctx.org.id, ctx.body.url, J(events), ctx.body.active === false ? 0 : 1, Date.now());
+    audit(ctx.org.id, ctx.actor, "webhook.created", ctx.body.url);
+    return { status: 201, body: { id: wid, url: ctx.body.url, events } };
+  });
+
+  R("DELETE", /^\/v1\/webhooks\/([\w-]+)$/, (ctx, m) => {
+    const w = db.prepare("SELECT * FROM webhooks WHERE id=? AND org_id=?").get(m[1], ctx.org.id);
+    if (!w) return { status: 404, body: { error: "webhook_not_found" } };
+    db.prepare("DELETE FROM webhooks WHERE id=?").run(m[1]);
+    audit(ctx.org.id, ctx.actor, "webhook.deleted", w.url);
+    return { status: 200, body: { deleted: m[1] } };
+  });
+
+  // ------------------------------------------------------------------ HTTP
+  const MIME = { ".html": "text/html", ".css": "text/css", ".js": "text/javascript",
+    ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml" };
+
+  /* The exact files the browser client needs. An ALLOWLIST, not a directory.
+   *
+   * This used to serve anything under the repository root, and because static
+   * serving happens BEFORE authentication, that made two secrets fetchable by
+   * an unauthenticated request even in the hardened posture:
+   *
+   *   GET /server/.dev-token  -> a live API bearer token, which then grants
+   *                              full read and write access to every /v1 route
+   *   GET /server/drd.db      -> the whole database: contacts, message bodies,
+   *                              consent records, unsubscribe tokens
+   *
+   * Path traversal was never the hole; `path.normalize` plus the startsWith
+   * check held. The hole was that everything legitimately inside the root was
+   * public. An allowlist fails closed: a new file is unreachable until it is
+   * named here, which is the correct default for a directory that also holds
+   * the database.
+   */
+  const PUBLIC_FILES = new Set([
+    "index.html",
+    "app.js",
+    "engine.js",
+    "data.js",
+    "workspace.js",
+    "styles.css",
+    "drd-lead-engine.html",
+  ]);
+
+  function serveStatic(req, res, pathname) {
+    const rel = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+    // No directories, no nesting, no traversal to reason about: a single
+    // path segment that must appear in the allowlist.
+    if (!PUBLIC_FILES.has(rel)) {
+      res.writeHead(404, Object.assign({ "content-type": "text/plain" }, SEC_HEADERS));
+      return res.end("Not found");
+    }
+    const file = path.join(ROOT, rel);
+    // Belt and braces: the allowlist already forbids traversal, but a future
+    // edit to it should not be able to reintroduce one.
+    if (!file.startsWith(ROOT + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
+      res.writeHead(404, Object.assign({ "content-type": "text/plain" }, SEC_HEADERS));
+      return res.end("Not found");
+    }
+    const type = MIME[path.extname(file)];
+    if (!type) {
+      // Never fall back to application/octet-stream: an unknown type means an
+      // unexpected file, which should not be served at all.
+      res.writeHead(404, Object.assign({ "content-type": "text/plain" }, SEC_HEADERS));
+      return res.end("Not found");
+    }
+    res.writeHead(200, Object.assign({ "content-type": type }, SEC_HEADERS));
+    fs.createReadStream(file).pipe(res);
+  }
+
+  const server = http.createServer(async (req, res) => {
+    const started = Date.now();
+    const u = new URL(req.url, "http://localhost");
+    const SEC = {
+      "x-content-type-options": "nosniff",
+      "x-frame-options": "DENY",
+      "referrer-policy": "same-origin",
+    };
+    if (PUBLIC) SEC["strict-transport-security"] = "max-age=31536000; includeSubDomains";
+
+    const send = (status, body, extra) => {
+      const payload = J(body);
+      res.writeHead(status, Object.assign({
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(payload),
+        "cache-control": "no-store",
+      }, SEC, extra || {}));
+      res.end(payload);
+      log(`${req.method} ${u.pathname} ${status} ${Date.now() - started}ms`);
+    };
+    // A recipient clicking an unsubscribe link gets a page, not JSON.
+    const sendHtml = (status, html, extra) => {
+      res.writeHead(status, Object.assign({
+        "content-type": "text/html; charset=utf-8",
+        "content-length": Buffer.byteLength(html),
+        "cache-control": "no-store",
+      }, SEC, extra || {}));
+      res.end(html);
+      log(`${req.method} ${u.pathname} ${status} ${Date.now() - started}ms`);
+    };
+
+    // Browsers request this unprompted on every page load. Without it the
+    // access log carries a 404 per visit, which is noise that hides real ones.
+    if (u.pathname === "/favicon.ico" || u.pathname === "/favicon.svg") {
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">' +
+        '<rect width="32" height="32" rx="4" fill="#C9A84C"/>' +
+        '<text x="16" y="22" font-family="Montserrat,sans-serif" font-size="15" font-weight="800" ' +
+        'text-anchor="middle" fill="#0A1628">DD</text></svg>';
+      res.writeHead(200, Object.assign({
+        "content-type": "image/svg+xml",
+        "cache-control": "public, max-age=86400",
+      }, SEC));
+      return res.end(svg);
+    }
+
+    if (u.pathname === "/config.js") {
+      // The browser authenticates with an httpOnly session cookie. No key is
+      // ever shipped to the client; API keys are for server-to-server callers.
+      const js = 'window.DRD_API_BASE="";window.DRD_AUTH="cookie";window.DRD_LOGIN_REQUIRED=' +
+        (ADMIN_PASSWORD ? "true" : "false") + ";";
+      res.writeHead(200, Object.assign({ "content-type": "text/javascript", "cache-control": "no-store" }, SEC));
+      return res.end(js);
+    }
+    // Routed paths are the API under /v1/ plus the public unsubscribe handler
+    // at /u/<token>. Everything else is a static asset. The unsubscribe path
+    // is deliberately short and outside /v1/: it appears in the body of every
+    // message we send, and it must work for a recipient with no session.
+    const ROUTED = /^\/(v1\/|u\/)/;
+    if (!ROUTED.test(u.pathname)) return serveStatic(req, res, u.pathname);
+
+    const route = routes.find((r) => r.method === req.method && r.pattern.test(u.pathname));
+    if (!route) return send(404, { error: "not_found", path: u.pathname });
+
+    // ---- identity: session cookie (browser) or bearer key (server-to-server)
+    let org = null, actor = "api", rateKey = null;
+    const authHeader = req.headers.authorization || "";
+    const bearer = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : null;
+
+    if (bearer) {
+      const key = db.prepare("SELECT * FROM api_keys WHERE token_hash=? AND revoked=0").get(hashToken(bearer));
+      if (!key) return send(401, { error: "invalid_token" });
+      db.prepare("UPDATE api_keys SET last_used_at=? WHERE id=?").run(Date.now(), key.id);
+      org = db.prepare("SELECT * FROM organizations WHERE id=?").get(key.org_id);
+      actor = key.name; rateKey = key.id;
+    } else if (verifySession(readCookie(req, COOKIE))) {
+      org = db.prepare("SELECT * FROM organizations ORDER BY created_at LIMIT 1").get();
+      actor = "browser"; rateKey = "session";
+    } else if (!ADMIN_PASSWORD && !PUBLIC && isLoopback(req)) {
+      // Local development with no password set: treat the browser as the
+      // owner. LOOPBACK ONLY. Without the address check this granted full
+      // owner access, unauthenticated, to anything that could reach the port
+      // — and the listener defaults to every interface, so that was the whole
+      // local network, with the power to read the contact graph, change
+      // suppressions and arm sending.
+      org = db.prepare("SELECT * FROM organizations ORDER BY created_at LIMIT 1").get();
+      actor = "local"; rateKey = "local";
+    }
+
+    if (!route.publicRoute && !org) {
+      return send(401, { error: "unauthorized",
+        message: "Sign in, or send Authorization: Bearer <api key>." });
+    }
+
+    if (rateKey) {
+      const now = Date.now();
+      const b = buckets.get(rateKey) || { start: now, n: 0 };
+      if (now - b.start > RATE.windowMs) { b.start = now; b.n = 0; }
+      b.n++; buckets.set(rateKey, b);
+      if (b.n > RATE.max) return send(429, { error: "rate_limited", retry_after_ms: RATE.windowMs - (now - b.start) });
+    }
+
+    // body
+    let body = {};
+    if (req.method === "POST" || req.method === "PATCH" || req.method === "PUT") {
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      const raw = Buffer.concat(chunks).toString("utf8");
+      if (raw) { body = parseJSON(raw, null); if (body === null) return send(400, { error: "invalid_json" }); }
+    }
+
+    try {
+      const m = u.pathname.match(route.pattern);
+      const out = await route.handler({ org, actor, body, query: u.searchParams, req }, m);
+      if (out.html !== undefined) sendHtml(out.status, out.html, out.headers);
+      else send(out.status, out.body, out.headers);
+    } catch (e) {
+      log("ERROR", u.pathname, e.message);
+      send(500, { error: "internal_error", message: e.message });
+    }
+  });
+
+  server.on("close", () => { try { db.close(); } catch (e) {} });
+  return server;
+}
+
+if (require.main === module) {
+  const port = +(process.env.PORT || 8787);
+  // Default to loopback when there is no password and no explicit public
+  // intent. Binding every interface by default put an unauthenticated
+  // owner-access surface on the local network.
+  const defaultHost = (!process.env.DRD_ADMIN_PASSWORD && !process.env.DRD_PUBLIC)
+    ? "127.0.0.1" : "0.0.0.0";
+  const host = process.env.HOST || defaultHost;
+
+  // An empty database is the CORRECT state for a live deployment. This used to
+  // autoseed generated companies and contacts "so the deployment is never an
+  // empty shell", which is precisely wrong once the system can contact real
+  // people: it fills production with fiction and makes every number on the
+  // dashboard meaningless. Demo data is now explicit and opt-in.
+  try {
+    const { DEFAULT_DB } = require("./db.js");
+    const probe = require("./db.js").open();
+    const n = probe.prepare("SELECT COUNT(*) n FROM companies").get().n;
+    const demo = probe.prepare("SELECT COUNT(*) n FROM contacts WHERE origin='demo'").get().n;
+    probe.close();
+    if (n === 0 && process.env.DRD_DEMO) {
+      console.log("DRD_DEMO set and database empty — seeding sample data into " + DEFAULT_DB);
+      const out = require("./seed.js").seed();
+      console.log("Seeded:", JSON.stringify(out.counts));
+      console.log("NOTE: this data is generated and can never be sent to.");
+      if (!process.env.DRD_ADMIN_PASSWORD) console.log("API token:", out.token);
+    } else if (n === 0) {
+      console.log("Database is empty. Import real contacts with consent provenance:");
+      console.log("  GET  /v1/import/template   then   POST /v1/import");
+      console.log("  (set DRD_DEMO=1 to seed generated sample data for a demo instead)");
+    }
+    if (demo > 0) {
+      console.log("WARNING: " + demo + " generated sample contacts present. They can never be");
+      console.log("         sent to, but they make analytics meaningless. Remove with:");
+      console.log("         node server/purge-demo.js");
+    }
+  } catch (e) {
+    console.error("Database check failed:", e.message);
+  }
+
+  // Register job handlers before the loop starts, so an enqueued job never
+  // finds its kind unregistered and dies as a deployment error.
+  {
+    const db0 = require("./db.js").open();
+    replies.registerJobs(runner);
+    sequences.registerJobs(runner);
+    runner.register("campaign.followup", async (payload, ctx) => {
+      // Placeholder until sequence steps are built: record the intent to
+      // follow up rather than silently dropping it.
+      ctx.db.prepare("INSERT INTO audit_logs (id,org_id,actor,action,detail,at) VALUES (?,?,?,?,?,?)")
+        .run(require("./db.js").id("au"), ctx.orgId, "runner", "followup.due",
+          JSON.stringify(payload), Date.now());
+      return { noted: true };
+    });
+    const stop = runner.start(db0, { pollMs: 10000 });
+    process.on("SIGTERM", stop);
+    process.on("SIGINT", stop);
+    console.log("job runner started (handlers: " + runner.registered().join(", ") + ")");
+  }
+
+  const server = create();
+  server.listen(port, host, () =>
+    console.log(`Dr. D Lead Engineering API on ${host}:${port}  (AI: ${AI.provider()}, public: ${PUBLIC})`));
+
+  // Graceful shutdown so SQLite closes cleanly on redeploy.
+  const bye = (sig) => () => { console.log(sig + " received, closing."); server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 5000); };
+  process.on("SIGTERM", bye("SIGTERM"));
+  process.on("SIGINT", bye("SIGINT"));
+}
+module.exports = { create };

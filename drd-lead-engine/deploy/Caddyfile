@@ -1,0 +1,20 @@
+# Caddy handles TLS automatically (Let's Encrypt) for the subdomain.
+# Install to /etc/caddy/Caddyfile, then: sudo systemctl reload caddy
+#
+# This block is additive — if Caddy already serves drdlearn.com, append it
+# rather than replacing the file.
+
+leads.drdlearn.com {
+    encode zstd gzip
+
+    # The app sets its own security headers; Caddy adds the transport ones.
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        -Server
+    }
+
+    reverse_proxy 127.0.0.1:8080 {
+        header_up X-Forwarded-Proto {scheme}
+        header_up X-Real-IP {remote_host}
+    }
+}
